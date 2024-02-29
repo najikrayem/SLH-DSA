@@ -1,0 +1,1 @@
+add_subdirectory(qnx_ifs_verify)
