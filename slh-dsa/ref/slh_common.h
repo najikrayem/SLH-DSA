@@ -6,6 +6,19 @@
 #include "slh_config.h"
 
 
+// TODO rid of builtins; too slow.
+#define BYTESWAP32(x) __builtin_bswap32(x)
+#define BYTESWAP64(x) __builtin_bswap64(x)
+// Macro to convert to big-endian if the system is little-endian.
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    #define BE32(x) (BYTESWAP32(x))
+    #define BE64(x) (BYTESWAP64(x))
+#else
+    #define BE32(x) (x)
+    #define BE64(x) (x)
+#endif
+
+
 // PublicKey struct
 typedef struct PublicKey{
     char root[SLH_PARAM_n];
@@ -21,23 +34,82 @@ typedef struct SecretKey{
 } SK;
 
 
+typedef enum {
+    WOTS_HASH = 0,
+    WOTS_PK,
+    TREE,
+    FORS_TREE,
+    FORS_ROOTS,
+    WOTS_PRF,
+    FORS_PRF
+} AddressType;
+
+
 // Address struct
 typedef struct Address{
-    // NK TODO
+    // All the following values must be encoded in big-endian format
+
+    // Height of XMSS tree within hypertree. 0 ≤ layer < d
+    uint32_t layer;
+
+    // Three words containing the position of an XMSS tree within a layer of
+    // the hypertree. 0 ≤ address < 2^((d−1−layer)hprime). Since for any
+    // configuration the value of address is less than 2^64, and big-endian
+    // encoding is used, the address can be represented as a 64-bit integer,
+    // while the third word is not used.
+    uint32_t unused0;
+    uint64_t address;
+    
+    // Address Type. Since we only have 7 types, we can split the word into
+    // unused 3 bytes and 1 byte for the type to easily maintain the big-endian
+    // encoding.
+    uint8_t unused1[3];
+    uint8_t type;
+
+    // Three words. Interpretation depends on the type of address.
+    uint32_t w1;
+    uint32_t w2;
+    uint32_t w3;
 } ADRS;
+
+
+inline void setTreeAddress(ADRS* adrs, uint64_t idx_tree){
+    adrs->address = BE64(idx_tree);
+}
+
+inline void setLayerAddress(ADRS* adrs, uint32_t layer){
+    adrs->layer = BE32(layer);
+}
+
+inline void setTypeAndClear(ADRS* adrs, AddressType type){
+    adrs->type = (uint8_t)type;
+    adrs->w1 = 0;
+    adrs->w2 = 0;
+    adrs->w3 = 0;
+}
+
+
+inline void setKeyPairAddress(ADRS* adrs, uint32_t idx_leaf){
+    #if DATA_CHECKS_ENABLED
+        if (adrs->type == TREE){
+            // TODO THROW ERROR
+        }
+    #endif
+    adrs->w1 = BE32(idx_leaf);
+}
 
 
 // NK TODO: ADRS struct function signatures are not yet complete
 void setHashAddress(void*);
-void setTypeAndClear(void*);
-void setKeyPairAddress(void*);
+
+
 void getKeyPairAddress(void*);
 void setChainAddress(void*);
 void setTreeHeight(void*);
 void setTreeIndex(void*);
 void getTreeIndex(void*);
-void setTreeAddress(void*);
-void setLayerAddress(void*);
+
+
 
 
 // NK TODO: SIG_XMSS function signatures are not yet complete
@@ -50,24 +122,52 @@ void getXMSSSignature(void*);
 void getXMSSAUTH(void*);
 
 
+
 // NK TODO: Hash functions signatures are not yet complete
-void PRF_msg(void*);
-void H_msg(void*);
+
 void PRF(void*);
 void T_l(void*);
 void H(void*);
 void F(void*);
 
 
+/**
+ * @brief Used to generate the dirgest of the message.
+ * 
+ * @param randomizer Pointer to the randomizer. Must be n bytes long.
+ * @param pk_seed Pointer to the public key seed. Must be n bytes long.
+ * @param pk_root Pointer to public key root. Must be n bytes long.
+ * @param m Pointer to the message. Must be mlen bytes long.
+ * @param mlen Length of the message.
+ * @param out_hash Pointer to the array to store the generated hash. Must be m bytes long.
+*/
+void H_msg(const char* randomizer, const char* pk_seed, const char* pk_root, const char* m, uint64_t mlen, char* out_hash);
+
+
+/**
+ * @brief Psuedo-random function generate the randomizer for the randomized
+ * hashing of the message.
+ * 
+ * @param sk_prf Pointer to the secret key for the PRF. Must be n bytes long.
+ * @param opt_rand Pointer to the optional randomizer. Must be n bytes long.
+ * @param m Pointer to the message. Must be mlen bytes long.
+ * @param mlen Length of the message.
+ * @param out_randomizer Pointer to the array to store the generated randomizer. Must be n bytes long.
+ * 
+*/
+void PRF_msg(const char* sk_prf, const char* opt_rand, const char* m, uint64_t mlen, char* out_randomizer);
+
+
 // Algorithm 1
 /**
  * @brief Convert a byte array to an integer
  * 
- * @param x pointer to the byte string. Must be n bytes long.
- * @param out Pointer to the output array that hold the "integer". Must be n bytes long.
+ * @param x pointer to the byte string. Must be length bytes long.
+ * @param length Length of the input
+ * @param out Pointer to the output array that hold the "integer". Must fit the output length.
  * 
 */
-void toInt(const char* x, char* length);
+void toInt(const char* x, uint8_t length, char* out);
 
 
 
@@ -209,10 +309,10 @@ void xmss_PKFromSig(uint32_t idx, const char* sig_xmss, const char* m, const cha
  * @param sk_seed Pointer to the secret key seed. Must be n bytes long.
  * @param pk_seed Pointer to the public key seed. Must be n bytes long.
  * @param idx_tree Index of the XMSS tree at the lowest hypertree level. Must be less 2^(h - hprime).
- * @param idx_leaf Index of the WOTS+ key within the XMSS tree. TODO
+ * @param idx_leaf Index of the WOTS+ key within the XMSS tree. Must be less than 2^hprime.
  * @param sig_out Pointer to the array to store the generated hypertree signature. Must be n*(h + d * len) bytes long.
 */
-void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t idx_tree, uint64_t idx_leaf, char* sig_out);
+void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t idx_tree, uint32_t idx_leaf, char* sig_out);
 
 
 
@@ -269,11 +369,11 @@ char* fors_node(const char* sk_seed, uint64_t i, uint64_t z, const char* pk_seed
 /**
  * @brief Generate a FORS public key
  * 
- * @param md Pointer to the message digest. Must be k * a bits long (not bytes).
+ * @param md Pointer to the message digest. Must be ceil((k * a) / 8) bytes long.
  * @param sk_seed Pointer to the secret key seed. Must be n bytes long.
  * @param pk_seed Pointer to the public key seed. Must be n bytes long.
  * @param adrs Pointer to the address.
- * @param pk_out Pointer to the array to store the generated FORS signature. Must be k * (n * (a + 1)) bytes long.
+ * @param pk_out Pointer to the array to store the generated FORS signature. Must fit FORS_SIG_LEN bytes.
 */
 void fors_sign(const char* md, const char* sk_seed, const char* pk_seed, const ADRS* adrs, char* sig_out);
 
@@ -283,8 +383,8 @@ void fors_sign(const char* md, const char* sk_seed, const char* pk_seed, const A
 /**
  * @brief Compute a FORS public key from a FORS signature
  * 
- * @param sig_fors Pointer to the FORS signature. Must be k * (n * (a + 1)) bytes long.
- * @param md Pointer to the message digest. Must be k * a bits long (not bytes).
+ * @param sig_fors Pointer to the FORS signature. Must be FORS_SIG_LEN bytes long.
+ * @param md Pointer to the message digest. Must be ceil((k * a) / 8) bytes long.
  * @param pk_seed Pointer to the public key seed. Must be n bytes long.
  * @param adrs Pointer to the address.
  * @param pk_out Pointer to the array to store the computed FORS public key. Must be n bytes long.

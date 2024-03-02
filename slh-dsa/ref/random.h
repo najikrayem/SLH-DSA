@@ -7,4 +7,4 @@
  * 
  * @param str Pointer to the string to be filled with random characters.
 */
-void rand_string(char* str, uint32_t len);
+void randBytes(char* str, uint32_t len);
