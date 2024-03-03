@@ -11,6 +11,7 @@ SLH-DSA parameter sets are defined as:
 
 
 Equations for deriving some of the parameters:
+    d           = hypertree height
     w           = 2 ^ lgw
     m           = ceil((h - hprime) / 8) + ceil(hprime / 8) + ceil((a * k) / 8)
     pk_bytes    = 2 * n
@@ -22,9 +23,34 @@ Equations for deriving some of the parameters:
 
 Some precomputions can be done to speed up the program:
 
-    PRECOMP_01: Used in alg. 19 " slh_verify"
-    PRECOMP_01  = ceil(a * k / 8) + ceil((h - (h/d))/8) + ceil(h/(8d))
+    FORS_SIG_LEN: Length of the FORS signature.
+    FORS_SIG_LEN = k * (n * (a + 1))
 
+
+    XMSS_SIG_LEN: Length of the XMSS signature.
+    XMSS_SIG_LEN = n * (hprime + len)
+
+    HPRIME_LSB_MASK: Mask of the hprime least significant bits.
+
+    HT_SIG_LEN: Length of the HT signature.
+    HT_SIG_LEN = d * XMSS_SIG_LEN
+
+    SLH_SIGN_MD_LEN: Length of "md" in slh_sign.
+    SLH_SIGN_MD_LEN = ceil((k * a) / 8)
+
+    SLH_SIGN_TMPIDXTREE_LEN: Length of "tmp_idx_tree" in slh_sign.
+    SLH_SIGN_TMPIDXTREE_LEN = ceil((h - (h / d)) / 8)
+
+    SLH_SIGN_TMPIDXLEAF_LEN: Length of "tmp_idx_leaf" in slh_sign.
+    SLH_SIGN_TMPIDXLEAF_LEN = ceil(h / (8 * d))
+
+    SLH_SIGN_TREE_LSB_MASK: Mask of the least significant bits of the leaf
+        index. Used in slh_sign to get rid of the modulo operation.
+    SLH_SIGN_TREE_LSB_MASK = 2 ^ (h - (h / d)) - 1
+
+    SLH_SIGN_LEAF_LSB_MASK: Mask of the least significant bits of the leaf
+        index. Used in slh_sign to get rid of the modulo operation.
+    SLH_SIGN_LEAF_LSB_MASK = 2 ^ (h / d) - 1
 
 */
 
@@ -60,7 +86,16 @@ Some precomputions can be done to speed up the program:
     #define SLH_PARAM_len2          3
     #define SLH_PARAM_len           67
 
-    #define PRECOMP_01              49    
+    #define XMSS_SIG_LEN            2272
+    #define FORS_SIG_LEN            11200
+    #define HT_SIG_LEN              38624
+    #define HPRIME_LSB_MASK         0b1111
+    #define SLH_SIGN_MD_LEN         40
+    #define SLH_SIGN_TMPIDXTREE_LEN 8
+    #define SLH_SIGN_TMPIDXLEAF_LEN 1
+    #define SLH_SIGN_TREE_LSB_MASK  (~((uint64_t)0))
+    #define SLH_SIGN_LEAF_LSB_MASK  (~((uint16_t)0))
+
 
 #endif
 
@@ -72,6 +107,9 @@ SLH_DSA Hash Primitives can be defined as:
     - CONF_SLH_SHAKE
 */
 
+
+
+#define DATA_CHECKS_ENABLED 0       // NK TODO move this to CMakeLists.txt
 
 
 
