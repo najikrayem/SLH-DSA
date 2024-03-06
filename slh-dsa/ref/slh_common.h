@@ -1,7 +1,9 @@
 #pragma once
 
+#include <openssl/sha.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "slh_config.h"
 
