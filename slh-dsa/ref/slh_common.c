@@ -9,9 +9,86 @@ void inline concat(char *fst, uint8_t fst_len, char *snd, uint8_t snd_len, char 
             out[i] = snd[i - fst_len];
 }
 
-// Ignore these for now, they are used for profiling. TODO NK.
-void __cyg_profile_func_enter(void *this_fn, void *call_site) {}
-void __cyg_profile_func_exit(void *this_fn, void *call_site) {}
+
+#if INSTRUMENTATION_ENABLED
+
+    #include <dlfcn.h>
+    #include <stdio.h>
+    #include <sys/neutrino.h>
+    #include <inttypes.h>
+
+    void __cyg_profile_func_enter(void *func, void *caller)
+        __attribute__((no_instrument_function));
+
+    void __cyg_profile_func_exit(void *func, void *caller)
+        __attribute__((no_instrument_function));
+
+
+    uint64_t start_cycles[64];
+    uint8_t current_depth = 0;
+
+    void __cyg_profile_func_enter(void *func, void *caller){
+        start_cycles[current_depth] = ClockCycles();
+        current_depth++;
+    }
+
+    void __cyg_profile_func_exit(void *func, void *caller) {
+        uint64_t end_cycles = ClockCycles();
+
+        current_depth--;
+        uint64_t tot_cycles = end_cycles - start_cycles[current_depth];
+
+        Dl_info func_info;
+        dladdr(func, &func_info);
+
+        if (func_info.dli_sname) {
+            printf("FUNC: %s, \tCYCLES: %" PRIu64 "\n", func_info.dli_sname, tot_cycles);
+        } else {
+            printf("FUNC: %p, \tCYCLES: %" PRIu64 "\n", func, tot_cycles);
+        }
+
+    }
+
+#endif // INSTRUMENTATION_ENABLED
+
+
+void fors_sign(const char* md, const char* sk_seed, const char* pk_seed, const ADRS* adrs, char* sig_out){
+    // TODO NK: this function is a big mess
+
+    char* sig_tmp = sig_out;
+    uint32_t s;
+    uint64_t node_idx;
+
+    char* indices[64];
+    base_2b(md, SLH_SIGN_MD_LEN, SLH_PARAM_a, SLH_PARAM_k, indices);
+
+
+    for (uint32_t i = 0; i < SLH_PARAM_k; i++) {
+        fors_SKgen(sk_seed, pk_seed, adrs, (i << SLH_PARAM_a) + indices[i], sig_tmp);
+        sig_tmp += SLH_PARAM_n;
+
+        for (uint32_t j = 0; j < SLH_PARAM_a; j++) {
+
+            s = (indices[i] >> j) ^ (uint32_t)1;
+            node_idx = (i << (SLH_PARAM_a - j)) + s;
+
+            fors_node(sk_seed, node_idx, j, pk_seed, adrs, sig_tmp);
+            sig_tmp += SLH_PARAM_n;
+
+        }
+    }
+}
+
+
+
+void fors_SKgen(const char* sk_seed, const char* pk_seed, const ADRS* adrs, uint32_t idx, char* fors_sk){
+    ADRS skADRS;
+    memcpy(&skADRS, adrs, sizeof(ADRS));
+    setTypeAndClear(&skADRS, FORS_PRF);
+    setKeyPairAddress(&skADRS, getKeyPairAddress(adrs));
+    setTreeIndex(&skADRS, idx);
+    PRF(pk_seed, sk_seed, &skADRS, fors_sk);
+}
 
 
 void toInt(const char* x, uint8_t length, char* out){
@@ -44,7 +121,7 @@ char* chain(const char* x, uint64_t i, uint64_t s, const char* pk_seed, ADRS* ad
 
     for (uint64_t j = i; j < i + s; j++) {
         setHashAddress(adrs, j);
-        F(pk_seed, adrs, out);
+        F_inplace(pk_seed, adrs, out);
     }
 
     return out;    

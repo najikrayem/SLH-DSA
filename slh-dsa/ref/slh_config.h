@@ -57,6 +57,18 @@ Some precomputions can be done to speed up the program:
 
 #define CONF_SLH_256f       // NK TODO  move this to CMakeLists.txt
 
+/*
+TODO
+SLH_DSA Hash Primitives can be defined as:
+    - CONF_SLH_SHA2
+    - CONF_SLH_SHAKE
+*/
+
+#define DATA_CHECKS_ENABLED 0       // NK TODO move this to CMakeLists.txt
+#define INSTRUMENTATION_ENABLED 1   // NK TODO move this to CMakeLists.txt
+#define CONF_SLH_SHAKE 1            // NK TODO move this to CMakeLists.txt
+
+
 
 #if     defined(CONF_SLH_128s)
     // TODO
@@ -100,16 +112,7 @@ Some precomputions can be done to speed up the program:
 #endif
 
 
-/*
-TODO
-SLH_DSA Hash Primitives can be defined as:
-    - CONF_SLH_SHA2
-    - CONF_SLH_SHAKE
-*/
 
-
-
-#define DATA_CHECKS_ENABLED 0       // NK TODO move this to CMakeLists.txt
 
 
 

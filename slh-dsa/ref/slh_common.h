@@ -8,17 +8,33 @@
 #include "slh_config.h"
 
 
-// TODO rid of builtins; too slow.
-#define BYTESWAP32(x) __builtin_bswap32(x)
-#define BYTESWAP64(x) __builtin_bswap64(x)
-// Macro to convert to big-endian if the system is little-endian.
+// These two functions swap the byte order of a 32-bit or 64-bit integer.
+// We don't know how well optimized the built-in functions are, so we use
+// inline assembly for ARM64 and the built-in functions for other architectures.
+inline uint32_t byteswap32(uint32_t x) {
+    #ifdef __aarch64__
+        __asm__("REV %w0, %w0" : "+r" (x));
+    #else
+        x = __builtin_bswap32(x);
+    #endif
+}
+inline uint64_t byteswap64(uint64_t x) {
+    #ifdef __aarch64__
+        __asm__("REV64 %x0, %x0" : "+r" (x));
+    #else
+        x = __builtin_bswap64(x);
+    #endif
+    return x;
+}
+// Macro to convert to big-endian iff the system is little-endian.
 #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-    #define BE32(x) (BYTESWAP32(x))
-    #define BE64(x) (BYTESWAP64(x))
+    #define BE32(x) (byteswap32(x))
+    #define BE64(x) (byteswap64(x))
 #else
     #define BE32(x) (x)
     #define BE64(x) (x)
 #endif
+
 
 
 // PublicKey struct
@@ -36,6 +52,7 @@ typedef struct SecretKey{
 } SK;
 
 
+// Types of addresses
 typedef enum {
     WOTS_HASH = 0,
     WOTS_PK,
@@ -74,22 +91,18 @@ typedef struct Address{
     uint32_t w3;
 } ADRS;
 
-
+// Address struct helper functions
 inline void setTreeAddress(ADRS* adrs, uint64_t idx_tree){
-    adrs->address = BE64(idx_tree);
-}
+    adrs->address = BE64(idx_tree);}
 
 inline void setLayerAddress(ADRS* adrs, uint32_t layer){
-    adrs->layer = BE32(layer);
-}
+    adrs->layer = BE32(layer);}
 
 inline void setTypeAndClear(ADRS* adrs, AddressType type){
     adrs->type = (uint8_t)type;
     adrs->w1 = 0;
     adrs->w2 = 0;
-    adrs->w3 = 0;
-}
-
+    adrs->w3 = 0;}
 
 inline void setKeyPairAddress(ADRS* adrs, uint32_t idx_leaf){
     #if DATA_CHECKS_ENABLED
@@ -97,27 +110,30 @@ inline void setKeyPairAddress(ADRS* adrs, uint32_t idx_leaf){
             // TODO THROW ERROR
         }
     #endif
-    adrs->w1 = BE32(idx_leaf);
-}
+    adrs->w1 = BE32(idx_leaf);}
 
+inline void setHashAddress(ADRS* adrs, uint32_t idx_leaf){
+    #if DATA_CHECKS_ENABLED
+        if (adrs->type != WOTS_HASH){
+            // TODO THROW ERROR
+        }
+    #endif
+    adrs->w3 = BE32(idx_leaf);}
+
+inline uint32_t getKeyPairAddress(ADRS* adrs){
+    return BE32(adrs->w1);}
+
+inline void setTreeIndex(ADRS* adrs, uint32_t idx_tree){
+    adrs->w1 = BE32(idx_tree);}
 
 // NK TODO: ADRS struct function signatures are not yet complete
-void setHashAddress(void*);
-
-
-void getKeyPairAddress(void*);
 void setChainAddress(void*);
 void setTreeHeight(void*);
-void setTreeIndex(void*);
 void getTreeIndex(void*);
-
-
-
 
 // NK TODO: SIG_XMSS function signatures are not yet complete
 void getWOTSSig(void*);
 void getXMSSAUTH(void*);
-
 
 // NK TODO: SIG_HT function signatures are not yet complete
 void getXMSSSignature(void*);
@@ -125,44 +141,13 @@ void getXMSSAUTH(void*);
 
 
 
-// NK TODO: Hash functions signatures are not yet complete
-
-void PRF(void*);
-void T_l(void*);
-void H(void*);
-void F(void*);
-
-
-/**
- * @brief Used to generate the dirgest of the message.
- * 
- * @param randomizer Pointer to the randomizer. Must be n bytes long.
- * @param pk_seed Pointer to the public key seed. Must be n bytes long.
- * @param pk_root Pointer to public key root. Must be n bytes long.
- * @param m Pointer to the message. Must be mlen bytes long.
- * @param mlen Length of the message.
- * @param out_hash Pointer to the array to store the generated hash. Must be m bytes long.
-*/
-void H_msg(const char* randomizer, const char* pk_seed, const char* pk_root, const char* m, uint64_t mlen, char* out_hash);
-
-
-/**
- * @brief Psuedo-random function generate the randomizer for the randomized
- * hashing of the message.
- * 
- * @param sk_prf Pointer to the secret key for the PRF. Must be n bytes long.
- * @param opt_rand Pointer to the optional randomizer. Must be n bytes long.
- * @param m Pointer to the message. Must be mlen bytes long.
- * @param mlen Length of the message.
- * @param out_randomizer Pointer to the array to store the generated randomizer. Must be n bytes long.
- * 
-*/
-void PRF_msg(const char* sk_prf, const char* opt_rand, const char* m, uint64_t mlen, char* out_randomizer);
-
-
 // Algorithm 1
 /**
  * @brief Convert a byte array to an integer
+ * 
+ * @note This function is not used in the current implementation. All of the 
+ * uses of this function in this algorithm are replaced with more efficient
+ * BE32 and BE64 macros.
  * 
  * @param x pointer to the byte string. Must be length bytes long.
  * @param length Length of the input
@@ -346,7 +331,7 @@ bool ht_verify(const char* m, const char* sig_ht, const char* pk_seed, uint64_t 
  * @param idx Index of the secret key. TODO
  * @param fors_sk Pointer to the array to store the generated FORS private-key value. Must be n bytes long.
 */
-void fors_SKgen(const char* sk_seed, const char* pk_seed, const ADRS* adrs, uint64_t idx, char* fors_sk); 
+void fors_SKgen(const char* sk_seed, const char* pk_seed, const ADRS* adrs, uint32_t idx, char* fors_sk); 
 
 
 

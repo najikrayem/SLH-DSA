@@ -59,6 +59,6 @@ void slh_sign(const char* msg, uint64_t msg_len, const SK* sk, char* sig){
     fors_pkFromSig(sig_fors, md, sk->pk.seed, &adrs, PK_fors);
 
 
-    ht_sign(PK_fors, sk->seed, sk->pk.seed, idx_tree, idx_leaf, sig_tmp)
+    ht_sign(PK_fors, sk->seed, sk->pk.seed, idx_tree, idx_leaf, sig_tmp);
 
 }
