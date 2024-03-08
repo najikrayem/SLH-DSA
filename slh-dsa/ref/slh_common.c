@@ -46,3 +46,28 @@ void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t i
         
     }
 }
+
+void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *out) {
+    // In case the byte string is too small return without doing any computation
+    if (ceil(out_len * b / 8.0) > in_len) {
+        return;
+    }
+
+    uint64_t in = 0;
+    uint8_t bits = 0;
+    uint64_t total = 0; // This will work for values of b specified in the standard
+
+    for (uint64_t i = 0; i < out_len; i++) {
+        while (bits < b) {
+            total = (total << 8) + x[in];
+            in++;
+            bits += 8;
+        }
+        bits -= b;
+        out[i] = (char) fmodl(total >> bits, pow(2, b));
+    }
+}
+
+void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *adrs, char *pk_out) {
+    
+}
