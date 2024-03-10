@@ -1,6 +1,5 @@
 #include "slh_common.h"
 #include "slh_config.h"
-#include <stdint.h>
 
 void inline concat(char *fst, uint8_t fst_len, char *snd, uint8_t snd_len, char *out) {
     for (uint8_t i = 0; i < fst_len + snd_len; i++)
