@@ -2,6 +2,14 @@
 #include "slh_config.h"
 #include <stdint.h>
 
+void inline concat(char *fst, uint8_t fst_len, char *snd, uint8_t snd_len, char *out) {
+    for (uint8_t i = 0; i < fst_len + snd_len; i++)
+        if (i < fst_len)
+            out[i] = fst[i];
+        else
+            out[i] = snd[i - fst_len];
+}
+
 // Ignore these for now, they are used for profiling. TODO NK.
 void __cyg_profile_func_enter(void *this_fn, void *call_site) {}
 void __cyg_profile_func_exit(void *this_fn, void *call_site) {}
@@ -50,11 +58,6 @@ void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t i
 }
 
 void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *out) {
-    // In case the byte string is too small return without doing any computation
-    if (ceil(out_len * b / 8.0) > in_len) { 
-        return;
-    }
-
     uint64_t in = 0;
     uint8_t bits = 0;
     uint64_t total = 0; // This will work for values of b specified in the standard
@@ -66,7 +69,7 @@ void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *
             bits += 8;
         }
         bits -= b;
-        out[i] = (char) fmodl(total >> bits, pow(2, b));
+        out[i] = (char) fmodl(total >> bits, (1 << b));
     }
 }
 
@@ -77,7 +80,7 @@ void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *a
     char csum_bs[sizeof(uint64_t)];
     char csum_bw[SLH_PARAM_len2];
     char msg_csum[SLH_PARAM_len];
-    char tmp[SLH_PARAM_len]; // remove as it should be included in adrs
+    char tmp[SLH_PARAM_len];
 
     base_2b(m, SLH_PARAM_n, SLH_PARAM_lgw, SLH_PARAM_len1, msg);
 
@@ -88,21 +91,17 @@ void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *a
     csum = csum << ((8 - ((SLH_PARAM_len2 * SLH_PARAM_lgw) % 8)) % 8);
     toByte((char *) csum, csum_bs);
     base_2b(csum_bs, sizeof(uint64_t), SLH_PARAM_lgw, SLH_PARAM_len2, csum_bw);
-    for (uint8_t i = 0; i < SLH_PARAM_len1; i++) {
-        msg_csum[i] = msg[i];
-    }
-    for (uint8_t i = SLH_PARAM_len1; i < SLH_PARAM_len; i++) {
-        msg_csum[i] = csum_bw[SLH_PARAM_len - i];
-    }
+
+    concat(msg, SLH_PARAM_len1, csum_bw, SLH_PARAM_len2, msg_csum);
 
     for (uint8_t i = 0; i < SLH_PARAM_len; i++) {
-        //setChainAddress(NULL);ADRS setChainAddress function is not yet completed
+        //setChainAddress(adrs, i);
         chain(&sig[i], msg[i], SLH_PARAM_w - 1 - msg[i], pk_seed, adrs, &tmp[i]);
     }
-    ADRS wotspkADRS;
+    ADRS wotspkADRS = *adrs;
     setTypeAndClear(&wotspkADRS, WOTS_PK);
-    setKeyPairAddress(&wotspkADRS, adrs->w1);
-    // Set pk_out to result of t_l(pk_seed, wotspkADRS.tmp)
+    //setKeyPairAddress(&wotspkADRS, getKeyPairAddress(adrs));
+    //T_l(pk_seed, wotspkADRS, tmp, pk_out);
 }
 
 void xmss_sign(const char *m, const char *sk_seed, uint32_t idx, const char *pk_seed, ADRS *adrs, char *sig_out) {
@@ -119,38 +118,43 @@ void xmss_sign(const char *m, const char *sk_seed, uint32_t idx, const char *pk_
     setKeyPairAddress(adrs, idx);
     wots_sign(m, sk_seed, pk_seed, adrs, sig);
 
-    for (uint8_t i = 0; i < SLH_PARAM_len; i++)
-        sig_out[i] = sig[i];
-    for (uint8_t i = SLH_PARAM_len; i < SLH_PARAM_len + SLH_PARAM_hprime; i++)
-        sig_out[i] = auth[i - SLH_PARAM_len];
+    concat(sig, SLH_PARAM_len, auth, SLH_PARAM_hprime, sig_out);
 }
 
 void fors_pkFromSig(const char *sig_fors, const char *md, const char *pk_seed, ADRS *adrs, char *pk_out) {
     char indices[SLH_PARAM_k];
     char node[2];
     char root[SLH_PARAM_k];
+    char sk[SLH_PARAM_n];
+    char auth[SLH_PARAM_n * SLH_PARAM_a];
+    char concat_arr[2];
 
     ADRS forspkADRS;
 
     base_2b(md, SLH_PARAM_k * SLH_PARAM_a, SLH_PARAM_a, SLH_PARAM_k, indices);
 
     for (uint8_t i = 0; i < SLH_PARAM_k; i++) {
-        // get sigfors sk and assign to sk
-        //setTreeHeight(adrs, 0);
-        //setTreeIndex(i * (1 << SLH_PARAM_a) + indices[i])
-        //F(pk_seed, adrs, sk, node[0])
+        getSK(sig_fors, i, sk);
+        setTreeHeight(adrs, 0);
+        setTreeIndex(i * (1 << SLH_PARAM_a) + indices[i])
+        F(pk_seed, adrs, sk, &node[0])
 
-        // get auth get_auth(sig_fors, i, auth);
+        get_auth(sig_fors, i, auth);
         for (uint8_t j = 0; j < SLH_PARAM_a; j++) {
-            //setTreeHeight(adrs, j+1);
+            setTreeHeight(adrs, j+1);
             if (indices[i] / (1 << j) & 1) {
                 // Odd case
-                //setTreeIndex(adrs, get tree index -1 /2)
-                //H(pk_seed, adrs, concat auth[j] node[0], node[1])
+                setTreeIndex(adrs, (getTreeIndex(adrs) - 1) / 2);
+                concat_arr[0] = auth[j];
+                concat_arr[1] = node[0]
+                H(pk_seed, adrs, concat_arr, &node[1]);
             }
             else {
-                //setTreeIndex(adrs, get tree index /2)
-                //h(pk_seed, adrs, concat node[0] auth[j], node[1])
+                // Even case
+                setTreeIndex(adrs, (getTreeIndex(adrs)) / 2);
+                concat_arr[0] = node[0];
+                concat_arr[1] = auth[j];
+                H(pk_seed, adrs, concat_arr, &node[1]);
             }
             node[0] = node[1];
         }
