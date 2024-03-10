@@ -124,3 +124,41 @@ void xmss_sign(const char *m, const char *sk_seed, uint32_t idx, const char *pk_
     for (uint8_t i = SLH_PARAM_len; i < SLH_PARAM_len + SLH_PARAM_hprime; i++)
         sig_out[i] = auth[i - SLH_PARAM_len];
 }
+
+void fors_pkFromSig(const char *sig_fors, const char *md, const char *pk_seed, ADRS *adrs, char *pk_out) {
+    char indices[SLH_PARAM_k];
+    char node[2];
+    char root[SLH_PARAM_k];
+
+    ADRS forspkADRS;
+
+    base_2b(md, SLH_PARAM_k * SLH_PARAM_a, SLH_PARAM_a, SLH_PARAM_k, indices);
+
+    for (uint8_t i = 0; i < SLH_PARAM_k; i++) {
+        // get sigfors sk and assign to sk
+        //setTreeHeight(adrs, 0);
+        //setTreeIndex(i * (1 << SLH_PARAM_a) + indices[i])
+        //F(pk_seed, adrs, sk, node[0])
+
+        // get auth get_auth(sig_fors, i, auth);
+        for (uint8_t j = 0; j < SLH_PARAM_a; j++) {
+            //setTreeHeight(adrs, j+1);
+            if (indices[i] / (1 << j) & 1) {
+                // Odd case
+                //setTreeIndex(adrs, get tree index -1 /2)
+                //H(pk_seed, adrs, concat auth[j] node[0], node[1])
+            }
+            else {
+                //setTreeIndex(adrs, get tree index /2)
+                //h(pk_seed, adrs, concat node[0] auth[j], node[1])
+            }
+            node[0] = node[1];
+        }
+        root[i] = node[0];
+    }
+
+    forspkADRS = *adrs;
+    setTypeAndClear(&forspkADRS, FORS_ROOTS);
+    setKeyPairAddress(&forspkADRS, getKeyPairAddress(adrs));
+    T_k(pk_seed, forspkADRS, root, pk_out);
+}
