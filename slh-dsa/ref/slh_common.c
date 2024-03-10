@@ -104,3 +104,23 @@ void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *a
     setKeyPairAddress(&wotspkADRS, adrs->w1);
     // Set pk_out to result of t_l(pk_seed, wotspkADRS.tmp)
 }
+
+void xmss_sign(const char *m, const char *sk_seed, uint32_t idx, const char *pk_seed, ADRS *adrs, char *sig_out) {
+    uint64_t k;
+    char auth[SLH_PARAM_hprime];
+    char sig[SLH_PARAM_len];
+    
+    for (uint64_t i = 0; i < SLH_PARAM_hprime; i++) {
+        k = (idx / (1 << i)) ^ 1;
+        xmss_node(sk_seed, k, i, pk_seed, adrs, &auth[i]);
+    }
+
+    setTypeAndClear(adrs, WOTS_HASH);
+    setKeyPairAddress(adrs, idx);
+    wots_sign(m, sk_seed, pk_seed, adrs, sig);
+
+    for (uint8_t i = 0; i < SLH_PARAM_len; i++)
+        sig_out[i] = sig[i];
+    for (uint8_t i = SLH_PARAM_len; i < SLH_PARAM_len + SLH_PARAM_hprime; i++)
+        sig_out[i] = auth[i - SLH_PARAM_len];
+}
