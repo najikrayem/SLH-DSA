@@ -1,4 +1,6 @@
 #include "slh_common.h"
+#include "slh_config.h"
+#include <stdint.h>
 
 // Ignore these for now, they are used for profiling. TODO NK.
 void __cyg_profile_func_enter(void *this_fn, void *call_site) {}
@@ -49,7 +51,7 @@ void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t i
 
 void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *out) {
     // In case the byte string is too small return without doing any computation
-    if (ceil(out_len * b / 8.0) > in_len) {
+    if (ceil(out_len * b / 8.0) > in_len) { 
         return;
     }
 
@@ -68,6 +70,37 @@ void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *
     }
 }
 
+// This function is inclomplete since many functions called by it are incomplete
 void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *adrs, char *pk_out) {
-    
+    uint64_t csum;
+    char msg[SLH_PARAM_len1];
+    char csum_bs[sizeof(uint64_t)];
+    char csum_bw[SLH_PARAM_len2];
+    char msg_csum[SLH_PARAM_len];
+    char tmp[SLH_PARAM_len]; // remove as it should be included in adrs
+
+    base_2b(m, SLH_PARAM_n, SLH_PARAM_lgw, SLH_PARAM_len1, msg);
+
+    for (uint64_t i = 0; i < SLH_PARAM_len1; i++) {
+        csum += (SLH_PARAM_w - 1) - msg[i];
+    }
+
+    csum = csum << ((8 - ((SLH_PARAM_len2 * SLH_PARAM_lgw) % 8)) % 8);
+    toByte((char *) csum, csum_bs);
+    base_2b(csum_bs, sizeof(uint64_t), SLH_PARAM_lgw, SLH_PARAM_len2, csum_bw);
+    for (uint8_t i = 0; i < SLH_PARAM_len1; i++) {
+        msg_csum[i] = msg[i];
+    }
+    for (uint8_t i = SLH_PARAM_len1; i < SLH_PARAM_len; i++) {
+        msg_csum[i] = csum_bw[SLH_PARAM_len - i];
+    }
+
+    for (uint8_t i = 0; i < SLH_PARAM_len; i++) {
+        //setChainAddress(NULL);ADRS setChainAddress function is not yet completed
+        chain(&sig[i], msg[i], SLH_PARAM_w - 1 - msg[i], pk_seed, adrs, &tmp[i]);
+    }
+    ADRS wotspkADRS;
+    setTypeAndClear(&wotspkADRS, WOTS_PK);
+    setKeyPairAddress(&wotspkADRS, adrs->w1);
+    // Set pk_out to result of t_l(pk_seed, wotspkADRS.tmp)
 }
