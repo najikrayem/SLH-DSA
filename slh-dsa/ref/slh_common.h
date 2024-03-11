@@ -392,4 +392,3 @@ void fors_sign(const char* md, const char* sk_seed, const char* pk_seed, const A
  * @param pk_out Pointer to the array to store the computed FORS public key. Must be n bytes long.
 */
 void fors_pkFromSig(const char* sig_fors, const char* md, const char* pk_seed, ADRS* adrs, char* pk_out);
-
