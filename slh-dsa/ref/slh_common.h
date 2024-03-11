@@ -1,5 +1,6 @@
 #pragma once
 
+#include <openssl/sha.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
@@ -176,11 +177,11 @@ void toInt(const char* x, uint8_t length, char* out);
 /**
  * @brief Convert an integer to a byte string.
  * 
- * @param x "integer" to be converted. Array of n bytes.
+ * @param x "integer" to be converted.
  * @param out Pointer to the output array that hold the byte string. Must be n bytes long.
  * 
 */
-void toByte(const char* x, char* out);
+void toByte(uint64_t x, char* out);
 
 
 
