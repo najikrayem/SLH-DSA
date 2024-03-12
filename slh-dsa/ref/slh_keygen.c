@@ -1,7 +1,8 @@
-#include "slh_keygen.h"
-#include "slh_common.h"
+#include <string.h>
 
+#include "slh_keygen.h"
 #include "random.h"
+#include "slh_common.h"
 
 void slh_keygen(SK* out_sk, PK* out_pk){
 
@@ -14,6 +15,6 @@ void slh_keygen(SK* out_sk, PK* out_pk){
 
     xmss_node(out_sk->seed, 0, SLH_PARAM_hprime, out_pk->seed, &adrs, out_pk->root);
 
-    memcopy(out_sk->pk, out_pk, SLH_PARAM_pk_bytes);
+    memcpy(&(out_sk->pk), out_pk, SLH_PARAM_pk_bytes);
 
 }

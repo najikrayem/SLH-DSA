@@ -2,4 +2,4 @@
 add_subdirectory(ref)
 
 # armv8 optimized implementation
-add_subdirectory(armv8)
+# add_subdirectory(armv8)

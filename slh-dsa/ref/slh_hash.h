@@ -2,12 +2,41 @@
 
 #include <stdint.h>
 #include "slh_config.h"
-#include "slh_common.h"
+#include "slh_ds.h"
 
 
-// NK TODO: Hash functions signatures are not yet complete
-void T_l(void*);
-void H(void*);
+/**
+ * @brief  Maps a (len*n)-byte message to an n-byte message.
+ * 
+ * @param pk_seed Pointer to the public key seed. Must be n bytes long.
+ * @param adrs Pointer to the address.
+ * @param m Pointer to the message. Must be len*n bytes long.
+ * @param out Pointer to the array to store the generated hash. Must be n bytes long.
+*/
+void T_len(const char* pk_seed, const ADRS* adrs, const char* m, char* out);
+
+
+/**
+ * @brief Maps a (k*n)-byte message to an n-byte message.
+ * 
+ * @param pk_seed Pointer to the public key seed. Must be n bytes long.
+ * @param adrs Pointer to the address.
+ * @param m Pointer to the message. Must be k*n bytes long.
+ * @param out Pointer to the array to store the generated hash. Must be n bytes long.
+*/
+void T_k(const char* pk_seed, const ADRS* adrs, const char* m, char* out);
+
+
+/**
+ * @brief Hash function takes in a 2n-byte input and outputs an n-byte hash.
+ * 
+ * @param pk_seed Pointer to the public key seed. Must be n bytes long.
+ * @param adrs Pointer to the address.
+ * @param m Pointer to the message. Must be 2n bytes long.
+ * @param out Pointer to the array to store the generated hash. Must be n bytes long.
+*/
+void H(const char* pk_seed, const ADRS* adrs, const char* m, char* out);
+
 
 
 
