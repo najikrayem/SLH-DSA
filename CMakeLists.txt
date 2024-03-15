@@ -1,34 +1,16 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.22.1)
 
 # Set the project name
-project(SLH_DSA)
+project(SLH_DSA LANGUAGES C)
 
-# # Define an option to enable/disable building examples
-# option(BUILD_EXAMPLES "Build example programs" ON)
-
-# # Define an option to enable/disable building tests
-# option(BUILD_TESTS "Build test programs" ON)
-
-# # 
-
-# # Add "example" subdirectory only if option BUILD_EXAMPLES is enabled
-# if(BUILD_EXAMPLES)
-#     add_subdirectory(example)
-# endif
-
-# # Add "test" subdirectory only if option BUILD_TESTS is enabled
-# if(BUILD_TESTS)
-#     add_subdirectory(test)
-# endif
-
-# example programs
-add_subdirectory(example)
-
-# test programs
-add_subdirectory(test)
+# Add compiler flags
+add_compile_options(-march=armv8-a)
 
 # Add the implementation subdirectory
 add_subdirectory(slh-dsa)
+
+# Add the example subdirectory
+add_subdirectory(example)
 
 
 
