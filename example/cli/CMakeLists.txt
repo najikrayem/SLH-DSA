@@ -4,3 +4,4 @@ add_executable(GenerateKeys
 target_link_libraries(GenerateKeys
     slh_keygen
 )
+

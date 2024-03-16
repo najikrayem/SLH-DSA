@@ -22,6 +22,7 @@ add_library(slh_common STATIC
 target_link_libraries(slh_common
     slh_hash
     random
+    m
 )
 target_link_options(slh_common PUBLIC
     -lm
