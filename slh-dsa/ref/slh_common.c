@@ -38,8 +38,8 @@ char* chain(const char* x, uint64_t i, uint64_t s, const char* pk_seed, ADRS* ad
         return NULL;
     }
     
-    strcpy(out, x); 
-    // MD REVISIT: probably better to use strncpy()?
+    memcpy(out, x, SLH_PARAM_n); 
+    // MD REVISIT: probably better to use strncpy()? NK: dont use strcpy, it assumes null terminated strings. Use memcpy instead.   
 
     for (uint64_t j = i; j < i + s; j++) {
         setHashAddress(adrs, j);
