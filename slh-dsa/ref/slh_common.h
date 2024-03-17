@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -17,6 +18,7 @@ static inline uint32_t byteswap32(uint32_t x) {
     #else
         x = __builtin_bswap32(x);
     #endif
+    return x;
 }
 static inline uint64_t byteswap64(uint64_t x) {
     #ifdef __aarch64__
@@ -36,13 +38,12 @@ static inline uint64_t byteswap64(uint64_t x) {
 #endif
 
 
-
 // Address struct helper functions
 static inline void setTreeAddress(ADRS* adrs, uint64_t idx_tree){
     adrs->address = BE64(idx_tree);}
 
-static inline void setLayerAddress(ADRS* adrs, uint32_t layer){
-    adrs->layer = BE32(layer);}
+static inline void setLayerAddress(ADRS* adrs, uint8_t layer){
+    adrs->layer = layer;}
 
 static inline void setTypeAndClear(ADRS* adrs, AddressType type){
     adrs->type = (uint8_t)type;
@@ -58,6 +59,9 @@ static inline void setKeyPairAddress(ADRS* adrs, uint32_t idx_leaf){
     #endif
     adrs->w1 = BE32(idx_leaf);}
 
+static inline uint32_t getKeyPairAddress(const ADRS* adrs){
+    return BE32(adrs->w1);}
+
 static inline void setHashAddress(ADRS* adrs, uint32_t idx_leaf){
     #if DATA_CHECKS_ENABLED
         if (adrs->type != WOTS_HASH){
@@ -66,11 +70,11 @@ static inline void setHashAddress(ADRS* adrs, uint32_t idx_leaf){
     #endif
     adrs->w3 = BE32(idx_leaf);}
 
-static inline uint32_t getKeyPairAddress(const ADRS* adrs){
-    return BE32(adrs->w1);}
-
 static inline void setTreeIndex(ADRS* adrs, uint32_t idx_tree){
-    adrs->w1 = BE32(idx_tree);}
+    adrs->w3 = BE32(idx_tree);}
+
+static inline uint32_t getTreeIndex(const ADRS* adrs){
+    return BE32(adrs->w3);}
 
 static inline void setChainAddress(ADRS* adrs, uint32_t idx_chain){
     adrs->w2 = BE32(idx_chain);}
@@ -78,8 +82,9 @@ static inline void setChainAddress(ADRS* adrs, uint32_t idx_chain){
 static inline void setTreeHeight(ADRS* adrs, uint32_t tree_height){
     adrs->w2 = BE32(tree_height);}
 
-static inline uint32_t getTreeIndex(const ADRS* adrs){
-    return BE32(adrs->w3);}
+
+
+
 
 /**
  * @brief Get a pointer to the WOTS signature in the XMSS signature. The WOTS
@@ -124,16 +129,13 @@ static inline const char* getAUTH(const char* fors_sig, uint8_t idx){
 /**
  * @brief Convert a byte array to an integer
  * 
- * @note This function is not used in the current implementation. All of the 
- * uses of this function in this algorithm are replaced with more efficient
- * BE32 and BE64 macros.
+ * @param x pointer to the byte string. Must be n bytes long.
+ * @param n Length of the input
  * 
- * @param x pointer to the byte string. Must be length bytes long.
- * @param length Length of the input
- * @param out Pointer to the output array that hold the "integer". Must fit the output length.
+ * @return uint64_t The integer value of the byte string
  * 
 */
-void toInt(const char* x, uint8_t length, char* out);
+uint64_t toInt(const uint8_t *X, uint8_t n);
 
 
 

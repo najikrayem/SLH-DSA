@@ -291,13 +291,11 @@ void slh_sign(const char* msg, uint64_t msg_len, const SK* sk, char* sig){
     char* tmp_idx_leaf = tmp_idx_tree + SLH_SIGN_TMPIDXTREE_LEN;
 
     // Interpret it as a big-endian integer, and take the modulo.
-    uint64_t idx_tree;
-    toInt(tmp_idx_tree, SLH_SIGN_TMPIDXTREE_LEN, (char*)(&idx_tree));
+    uint64_t idx_tree = toInt(tmp_idx_tree, SLH_SIGN_TMPIDXTREE_LEN);
     idx_tree = idx_tree & SLH_SIGN_TREE_LSB_MASK;
 
     // Interpret it as a big-endian integer, and take the modulo.
-    uint16_t idx_leaf;
-    toInt(tmp_idx_leaf, SLH_SIGN_TMPIDXLEAF_LEN, (char*)(&idx_leaf));
+    uint16_t idx_leaf = toInt(tmp_idx_leaf, SLH_SIGN_TMPIDXLEAF_LEN);
     idx_leaf = idx_leaf & SLH_SIGN_LEAF_LSB_MASK;
 
     setTreeAddress(&adrs, idx_tree);

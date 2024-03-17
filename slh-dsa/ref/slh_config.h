@@ -79,8 +79,7 @@ SLH_DSA Hash Primitives can be defined as:
 */
 
 #define DATA_CHECKS_ENABLED 0       // NK TODO move this to CMakeLists.txt
-#define INSTRUMENTATION_ENABLED 1   // NK TODO move this to CMakeLists.txt
-#define DEBUG_ENABLED 1             // NK TODO move this to CMakeLists.txt
+#define DEBUG_ENABLED 0             // NK TODO move this to CMakeLists.txt
 #define CONF_SLH_SHAKE 1            // NK TODO move this to CMakeLists.txt
 
 
@@ -267,7 +266,7 @@ SLH_DSA Hash Primitives can be defined as:
     #define SLH_SIGN_TMPIDXTREE_LEN 8
     #define SLH_SIGN_TMPIDXLEAF_LEN 1
     #define SLH_SIGN_TREE_LSB_MASK  (~((uint64_t)0))
-    #define SLH_SIGN_LEAF_LSB_MASK  (~((uint16_t)0))
+    #define SLH_SIGN_LEAF_LSB_MASK  0xF
     #define CSUM_BYTES              1
     #define FORS_AUTH_LEN           288
 

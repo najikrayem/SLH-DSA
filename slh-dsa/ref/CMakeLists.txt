@@ -19,13 +19,13 @@ target_link_libraries(slh_hash
 add_library(slh_common STATIC
     slh_common.c
 )
-target_link_libraries(slh_common
+target_include_directories(slh_common PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(slh_common PUBLIC
     slh_hash
     random
     m
-)
-target_link_options(slh_common PUBLIC
-    -lm
 )
 
 
@@ -42,8 +42,12 @@ target_link_libraries(slh_keygen
 
 
 
+
 add_library(slh_sign STATIC
     slh_sign.c
+)
+target_include_directories(slh_sign PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(slh_sign
     slh_common
@@ -53,6 +57,9 @@ target_link_libraries(slh_sign
 
 add_library(slh_verify STATIC
     slh_verify.c
+)
+target_include_directories(slh_verify PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(slh_verify
     slh_common
