@@ -1,5 +1,7 @@
 # Run unit tests
 build/test/slh_common_test
+build/test/slh_sign_test
+build/test/slh_hash_test
 build/test/slh_ds_test
 
 
