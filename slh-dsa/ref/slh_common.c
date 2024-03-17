@@ -8,16 +8,23 @@
 #include "slh_config.h"
 #include "slh_hash.h"
 
+// #if INSTRUMENTATION_ENABLED
+//     #include "cyg_instrumentation.h"
+// #endif
 
-void toInt(const char* x, uint8_t length, char* out){
+
+uint64_t toInt(const uint8_t *X, uint8_t n) {
+    if (n == 8)
+        return BE64(*(const uint64_t *)X);
+
+    if (n == 4)
+        return BE32(*(const uint32_t *)X);
+
     uint64_t total = 0;
-    uint64_t i = 0;
-
-    for (uint64_t i = 0; i < length; i++){
-        total = 256 * total + x[i];
+    for(uint8_t i = 0; i < n; i++) {
+        total = (total << 8) + X[i];
     }
-
-    out = (char*) total;
+    return total;
 }
 
 

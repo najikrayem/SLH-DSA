@@ -6,21 +6,21 @@
 /**
  * @brief Get a pointer to the randomizer in the signature [0:n]
 */
-inline const char* getR(const char* sig){
+static inline const char* getR(const char* sig){
     return sig;}
 
 /**
  * @brief Get a pointer to the FORS signature in the signature
  * [n:n + FORS_SIG_LEN]
 */
-inline const char* getSIG_FORS(const char* sig){
+static inline const char* getSIG_FORS(const char* sig){
     return sig + SLH_PARAM_n;}
 
 /**
  * @brief Get a pointer to the Hypertree signature in the signature
  * [n + FORS_SIG_LEN:n + FORS_SIG_LEN + HT_SIG_LEN]
 */
-inline const char* getSIG_HT(const char* sig){
+static inline const char* getSIG_HT(const char* sig){
     return sig + SLH_PARAM_n + FORS_SIG_LEN;}
 
 
@@ -29,7 +29,7 @@ inline const char* getSIG_HT(const char* sig){
  * hypertree signature. Each XMSS signature is of length n * (hprime + len), and
  * there are d of them in the hypertree signature. 
 */
-inline const char* getXMSSSignature (const char* sig_ht, uint8_t layer){
+static inline const char* getXMSSSignature (const char* sig_ht, uint8_t layer){
     return sig_ht + (layer * (SLH_PARAM_n * (SLH_PARAM_hprime + SLH_PARAM_len)));}
 
 
@@ -60,7 +60,7 @@ bool ht_verify(const char* m, const char* sig_ht, const char* pk_seed, uint64_t 
 
     xmss_PKFromSig(idx_leaf, sig_tmp, m, pk_seed, &adrs, tmp_node_1);
 
-    for(uint32_t j = 0; j < SLH_PARAM_d; j++){
+    for(uint8_t j = 0; j < SLH_PARAM_d; j++){
         idx_leaf = idx_tree & HPRIME_LSB_MASK;
         idx_tree = idx_leaf >> SLH_PARAM_hprime;
         setLayerAddress(&adrs, j);
@@ -109,13 +109,11 @@ bool slh_verify(const char *msg, uint64_t msg_len, const char *sig, const PK *pk
     char* tmp_idx_leaf = tmp_idx_tree + SLH_SIGN_TMPIDXTREE_LEN;
 
     // Interpret it as a big-endian integer, and take the modulo.
-    uint64_t idx_tree;
-    toInt(tmp_idx_tree, SLH_SIGN_TMPIDXTREE_LEN, (char*)(&idx_tree));
+    uint64_t idx_tree = toInt(tmp_idx_tree, SLH_SIGN_TMPIDXTREE_LEN);
     idx_tree = idx_tree & SLH_SIGN_TREE_LSB_MASK;
 
     // Interpret it as a big-endian integer, and take the modulo.
-    uint16_t idx_leaf;
-    toInt(tmp_idx_leaf, SLH_SIGN_TMPIDXLEAF_LEN, (char*)(&idx_leaf));
+    uint16_t idx_leaf = toInt(tmp_idx_leaf, SLH_SIGN_TMPIDXLEAF_LEN);
     idx_leaf = idx_leaf & SLH_SIGN_LEAF_LSB_MASK;
 
     setTreeAddress(&adrs, idx_tree);

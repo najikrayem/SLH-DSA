@@ -1,33 +1,33 @@
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <errno.h>
-#include <unistd.h>
 
-#include "slh_sign.h"
+#include "slh_verify.h"
 
 int main(int argc, char *argv[]) {
     // Check if all three arguments are provided
     if (argc != 4) {
-        printf("Usage: %s <secret_key_file> <message_file> <signature_file>\n", argv[0]);
+        printf("Usage: %s <public_key_file> <message_file> <signature_file>\n", argv[0]);
         return 1;
     }
 
     // Get the paths to the files
-    char *secretKeyFile = argv[1];
+    char *publicKeyFile = argv[1];
     char *messageFile = argv[2];
     char *signatureFile = argv[3];
 
-    // Attemp to mmap the secret key file
-    FILE *skFile = fopen(secretKeyFile, "r");
-    if (skFile == NULL) {
-        printf("Failed to open secret key file\n");
+    // Attemp to mmap the public key file
+    FILE *pkFile = fopen(publicKeyFile, "r");
+    if (pkFile == NULL) {
+        printf("Failed to open public key file\n");
         return 1;
     }
-    SK *sk = mmap(NULL, sizeof(SK), PROT_READ, MAP_PRIVATE, fileno(skFile), 0);
+    PK *pk = mmap(NULL, sizeof(PK), PROT_READ, MAP_PRIVATE, fileno(pkFile), 0);
 
-    if (sk == MAP_FAILED) {
-        printf("Failed to mmap secret key file: %s\n", strerror(errno));
+    if (pk == MAP_FAILED) {
+        printf("Failed to mmap public key file: %s\n", strerror(errno));
         return 1;
     }
 
@@ -50,40 +50,32 @@ int main(int argc, char *argv[]) {
     }
 
 
-    // Attemp to mmap the out signature file
-    FILE *sigFile = fopen(signatureFile, "w+");
+    // Attemp to mmap the input signature file
+    FILE *sigFile = fopen(signatureFile, "r");
     if (sigFile == NULL) {
         printf("Failed to open signature file\n");
         return 1;
     }
-
-    // Set the file to the size we want it to be
-    if (ftruncate(fileno(sigFile), SLH_PARAM_sig_bytes) == -1) {
-        printf("Failed to set file size: %s\n", strerror(errno));
-        return 1;
-    }
-
-    char *sig = mmap(NULL, SLH_PARAM_sig_bytes , PROT_WRITE, MAP_SHARED, fileno(sigFile), 0);
+    char *sig = mmap(NULL, SLH_PARAM_sig_bytes, PROT_READ, MAP_PRIVATE, fileno(sigFile), 0);
 
     if (sig == MAP_FAILED) {
         printf("Failed to mmap signature file: %s\n", strerror(errno));
         return 1;
     }
 
+    // Verify the signature
+    bool res = slh_verify(msg, msgSize, sig, pk);
 
-    // Sign the message
-    slh_sign(msg, msgSize, sk, sig);
+    if (res) {
+        printf("Signature is valid\n");
+    } else {
+        printf("Signature is invalid\n");
+    }
 
     // Unmap the files
-    munmap(sk, sizeof(SK));
+    munmap(pk, sizeof(PK));
     munmap(msg, msgSize);
     munmap(sig, SLH_PARAM_sig_bytes);
-
-    // Close the files
-    fclose(skFile);
-    fclose(msgFile);
-    fclose(sigFile);
-
 
     return 0;
 }
