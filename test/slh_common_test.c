@@ -1,7 +1,6 @@
 #include "unity.h"
 #include "slh_common.h"
 
-
 void setUp(void) {
     // set stuff up here
 }
@@ -70,13 +69,17 @@ void test_function_toInt(void) {
 
 }
 
+void test_chain() {
 
+}
 
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_function_BE32);
     RUN_TEST(test_function_BE64);
     RUN_TEST(test_function_toInt);
+    // RUN_TEST(test_chain);
+    
     return UNITY_END();
 }
 
