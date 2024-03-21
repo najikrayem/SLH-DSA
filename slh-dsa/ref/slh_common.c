@@ -42,15 +42,18 @@ void toByte(uint64_t x, char* out, uint8_t out_len){
 
 char* chain(const char* x, uint64_t i, uint64_t s, const char* pk_seed, ADRS* adrs, char* out){
     if ((i + s) >= SLH_PARAM_w) {
+        #if DEBUG_ENABLED
+            printf("Invalid input for chain, returning NULL\n");
+        #endif
         return NULL;
     }
-    
-    memcpy(out, x, SLH_PARAM_n); 
-    // MD REVISIT: probably better to use strncpy()? NK: dont use strcpy, it assumes null terminated strings. Use memcpy instead.   
 
-    for (uint64_t j = i; j < i + s; j++) {
+    setHashAddress(adrs, i);
+    F(pk_seed, adrs, x, out);
+
+    for (uint32_t j = (i + 1); j < (i + s); j++) {
         setHashAddress(adrs, j);
-        F_inplace(pk_seed, adrs, out);      //TODO NK
+        F(pk_seed, adrs, out, out);
     }
 
     return out;    
@@ -90,14 +93,14 @@ void wots_PKgen(const char* sk_seed, const char* pk_seed, ADRS* adrs, char* pk_o
 char* xmss_node(const char* sk_seed, uint32_t i, uint32_t z, const char* pk_seed, ADRS* adrs, char* node){
     
     if(z > SLH_PARAM_hprime || i >= (1 << (SLH_PARAM_hprime - z))){
+        #if DEBUG_ENABLED
+            printf("Invalid input for xmss_node, returning NULL\n");
+        #endif
         return NULL;
     }
 
-    if (z == 0){
-        setTypeAndClear(adrs, WOTS_HASH);
-        setKeyPairAddress(adrs, i);
-        wots_PKgen(sk_seed, pk_seed, adrs, node);
-    } else {
+    if (z != 0){
+        
         char lrnode[SLH_PARAM_n + SLH_PARAM_n]; // Buffer to hold the concatenation of lnode and rnode
         char *lnode = lrnode;
         char *rnode = lrnode + SLH_PARAM_n;
@@ -113,6 +116,13 @@ char* xmss_node(const char* sk_seed, uint32_t i, uint32_t z, const char* pk_seed
 
         // Hash the concatenated array and store the result in 'node'
         H(pk_seed, adrs, lrnode, node); // MD REVISIT: this might need to change based on how H is implemented/it's parameters
+
+    } else {
+
+        setTypeAndClear(adrs, WOTS_HASH);
+        setKeyPairAddress(adrs, i);
+        wots_PKgen(sk_seed, pk_seed, adrs, node);
+
     }
 
     return node;
@@ -130,16 +140,6 @@ void xmss_PKFromSig(uint32_t idx, const char* sig_xmss, const char* m, const cha
     // each auth is n bytes long and there are hprime of them for a total of hprime * n bytes
     const char* AUTH = getXMSSAUTH(sig_xmss);
 
-    // Buffer to hold the concatenation of an auth, a node, and another auth.
-    // This is used to speed up the concatenation of the auths and the nodes
-    // While computing the root form WOTS+ pk and auth.
-    char auth_1_node_0_auth_2[3 * SLH_PARAM_n];
-    char *auth_first = auth_1_node_0_auth_2;
-    char *node_0 = auth_1_node_0_auth_2 + SLH_PARAM_n;
-    char *auth_second = node_0;
-
-    char tmp_node1[SLH_PARAM_n];
-
     wots_PKFromSig(sig, m, pk_seed, adrs, root_out);
 
     setTypeAndClear(adrs, TREE);
@@ -147,29 +147,26 @@ void xmss_PKFromSig(uint32_t idx, const char* sig_xmss, const char* m, const cha
 
     for(uint32_t k = 0; k < SLH_PARAM_hprime; k++){
         setTreeHeight(adrs, k+1);
+
         if(((idx >> k) & 1) == 0){
-            setTreeIndex(adrs, getTreeIndex(adrs) >> 2);
-            
-            memcpy(auth_second, AUTH + (SLH_PARAM_h * k), SLH_PARAM_n);
 
-            H(pk_seed, adrs, auth_second, tmp_node1); // MD REVISIT: this might need to change based on how H is implemented/it's parameters
+            setTreeIndex(adrs, getTreeIndex(adrs) >> 1);
+            H_split(pk_seed, adrs, root_out, AUTH + (SLH_PARAM_n * k), root_out); // MD REVISIT: this might need to change based on how H is implemented/it's parameters
+        
         } else{
-            setTreeIndex(adrs, (getTreeIndex(adrs) - 1) >> 2);
 
-            memcpy(auth_first, AUTH + (SLH_PARAM_h * k), SLH_PARAM_n);
-            
-            H(pk_seed, adrs, auth_first, tmp_node1); // MD REVISIT: this might need to change based on how H is implemented/it's parameters
+            setTreeIndex(adrs, (getTreeIndex(adrs) - 1) >> 1);    
+            H_split(pk_seed, adrs, AUTH + (SLH_PARAM_n * k), root_out, root_out); // MD REVISIT: this might need to change based on how H is implemented/it's parameters
+        
         }
-        memcpy(node_0, tmp_node1, SLH_PARAM_n);
     }
-    memcpy(root_out, node_0, SLH_PARAM_n);
 }
 
 
 
 void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *out) {
     uint64_t in = 0;
-    uint8_t bits = 0;
+    uint64_t bits = 0;
     uint64_t total = 0; // This will work for values of b specified in the standard
 
     for (uint64_t i = 0; i < out_len; i++) {
@@ -179,33 +176,42 @@ void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *
             bits += 8;
         }
         bits -= b;
-        out[i] = (char) fmodl(total >> bits, (1 << b));
+        out[i] = (char)(total >> bits) & ((1 << b) - 1);
     }
 }
 
 
 
 void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *adrs, char *pk_out) {
-    uint64_t csum;
-    char msg[SLH_PARAM_len1 + SLH_PARAM_len2];
-    char csum_bs[CSUM_BYTES];
+    uint64_t csum = 0;
+    
     char msg_csum[SLH_PARAM_len];
-    char tmp[SLH_PARAM_len * SLH_PARAM_n];
 
+    char msg[SLH_PARAM_len1 + SLH_PARAM_len2];
     base_2b(m, SLH_PARAM_n, SLH_PARAM_lgw, SLH_PARAM_len1, msg);
 
+    // calculate checksum
     for (uint8_t i = 0; i < SLH_PARAM_len1; i++) {
         csum += (SLH_PARAM_w - 1) - msg[i];
     }
 
-    csum = csum << ((8 - ((SLH_PARAM_len2 * SLH_PARAM_lgw) % 8)) % 8);
+    csum = csum << ((8 - ((SLH_PARAM_len2 * SLH_PARAM_lgw) & 0b111)) & 0b111);
+
+    char csum_bs[CSUM_BYTES];
     toByte(csum, csum_bs, CSUM_BYTES);
     base_2b(csum_bs, CSUM_BYTES, SLH_PARAM_lgw, SLH_PARAM_len2, msg + SLH_PARAM_len1);
 
+    char tmp[SLH_PARAM_len * SLH_PARAM_n];
     for (uint32_t i = 0; i < SLH_PARAM_len; i++) {
         setChainAddress(adrs, i);
-        chain((sig + i), msg[i], SLH_PARAM_w - 1 - msg[i], pk_seed, adrs, (tmp + (i * SLH_PARAM_n)));
+        chain(( sig + (i * SLH_PARAM_n)),
+                msg[i],
+                SLH_PARAM_w - 1 - msg[i],
+                pk_seed,
+                adrs,
+                (tmp + (i * SLH_PARAM_n)));
     }
+
     ADRS wotspkADRS;
     memcpy(&wotspkADRS, adrs, sizeof(ADRS));
     setTypeAndClear(&wotspkADRS, WOTS_PK);
