@@ -62,13 +62,14 @@ bool ht_verify(const char* m, const char* sig_ht, const char* pk_seed, uint64_t 
 
     for(uint8_t j = 0; j < SLH_PARAM_d; j++){
         idx_leaf = idx_tree & HPRIME_LSB_MASK;
-        idx_tree = idx_leaf >> SLH_PARAM_hprime;
+        idx_tree >>= SLH_PARAM_hprime;
         setLayerAddress(&adrs, j);
         setTreeAddress(&adrs, idx_tree);
         sig_tmp = getXMSSSignature(sig_ht, j);
 
         // If j is even
         if ((j & 1) == 0){
+            // Check if xmss_PKFromSig can be done in place
             xmss_PKFromSig(idx_leaf, sig_tmp, tmp_node_1, pk_seed, &adrs, tmp_node_2);
         } else {
             xmss_PKFromSig(idx_leaf, sig_tmp, tmp_node_2, pk_seed, &adrs, tmp_node_1);

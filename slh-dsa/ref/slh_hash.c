@@ -51,6 +51,16 @@ void H(const char* pk_seed, const ADRS* adrs, const char* m, char* out){
 }
 
 
+void H_split(const char* pk_seed, const ADRS* adrs, const char* m1, const char* m2, char* out){
+    shake_init_state
+    shake_absorb(pk_seed, PK_SEED_BYTES)
+    shake_absorb(adrs, sizeof(ADRS))
+    shake_absorb(m1, SLH_PARAM_n)
+    shake_absorb(m2, SLH_PARAM_n)
+    shake_sqeeze(out, SLH_PARAM_n)
+}
+
+
 
 void H_msg(const char* randomizer, const char* pk_seed, const char* pk_root, const char* m, uint64_t mlen, char* out_hash){
     shake_init_state
@@ -83,13 +93,13 @@ void F(const char* pk_seed, const ADRS* adrs, const char* m, char* out){
 
 
 
-void F_inplace(const char* pk_seed, const ADRS* adrs, char* m){
-    shake_init_state
-    shake_absorb(pk_seed, PK_SEED_BYTES)
-    shake_absorb(adrs, sizeof(ADRS))
-    shake_absorb(m, SLH_PARAM_n)
-    shake_sqeeze(m, SLH_PARAM_n)
-}
+// void F_inplace(const char* pk_seed, const ADRS* adrs, char* m){
+//     shake_init_state
+//     shake_absorb(pk_seed, PK_SEED_BYTES)
+//     shake_absorb(adrs, sizeof(ADRS))
+//     shake_absorb(m, SLH_PARAM_n)
+//     shake_sqeeze(m, SLH_PARAM_n)
+// }
 
 
 

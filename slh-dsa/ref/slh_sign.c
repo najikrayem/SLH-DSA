@@ -111,18 +111,18 @@ void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t i
 
     setTreeAddress(&adrs, idx_tree);
 
-    char sig_ht [HT_SIG_LEN] = {0};
-    char* sig_tmp = sig_ht;
+    //char sig_ht [HT_SIG_LEN] = {0};
+    char* sig_tmp = sig_out;
 
     xmss_sign(m, sk_seed, idx_leaf, pk_seed, &adrs, sig_tmp);
-    sig_tmp += XMSS_SIG_LEN;
 
     char root[SLH_PARAM_n] = {0};
     xmss_PKFromSig(idx_leaf, sig_tmp, m, pk_seed, &adrs, root);
+    sig_tmp += XMSS_SIG_LEN;
 
     for(uint8_t j = 1; j < SLH_PARAM_d; j++){
 
-        idx_leaf = ((uint32_t)idx_tree) && ((uint32_t)HPRIME_LSB_MASK);
+        idx_leaf = idx_tree && HPRIME_LSB_MASK;
         idx_tree >>= SLH_PARAM_hprime;
 
         setLayerAddress(&adrs, j);
@@ -302,14 +302,13 @@ void slh_sign(const char* msg, uint64_t msg_len, const SK* sk, char* sig){
     setTypeAndClear(&adrs, FORS_TREE);
     setKeyPairAddress(&adrs, idx_leaf);
 
-    char* sig_fors = sig_tmp;
-    fors_sign(md, sk->seed, sk->pk.seed, &adrs, sig_fors);
-    sig_tmp += FORS_SIG_LEN;
+
+    fors_sign(md, sk->seed, sk->pk.seed, &adrs, sig_tmp);
 
     // Get FORS Key
     char PK_fors[SLH_PARAM_n];
-    fors_pkFromSig(sig_fors, md, sk->pk.seed, &adrs, PK_fors);
-
+    fors_pkFromSig(sig_tmp, md, sk->pk.seed, &adrs, PK_fors);
+    sig_tmp += FORS_SIG_LEN;
 
     ht_sign(PK_fors, sk->seed, sk->pk.seed, idx_tree, idx_leaf, sig_tmp);
 

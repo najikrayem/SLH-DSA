@@ -39,6 +39,21 @@ void H(const char* pk_seed, const ADRS* adrs, const char* m, char* out);
 
 
 
+/**
+ * @brief Extremely similar to H, but the message is split into two n-byte messages.
+ * to avoid the need for copying memory (particularly in the xmss_PKFromSig function)
+ * 
+ * @param pk_seed Pointer to the public key seed. Must be n bytes long.
+ * @param adrs Pointer to the address.
+ * @param m1 Pointer to the first message. Must be n bytes long.
+ * @param m2 Pointer to the second message. Must be n bytes long.
+ * @param out Pointer to the array to store the generated hash. Must be n bytes long
+ * Can be equal to m1 or m2.
+*/
+void H_split(const char* pk_seed, const ADRS* adrs, const char* m1, const char* m2, char* out);
+
+
+
 
 /**
  * @brief Used to generate the dirgest of the message.
@@ -79,14 +94,14 @@ void PRF_msg(const char* sk_prf, const char* opt_rand, const char* m, uint64_t m
 void F(const char* pk_seed, const ADRS* adrs, const char* m, char* out);
 
 
-/**
- * @brief Very Similar to F, but it overwrites the input array with the hash.
- * 
- * @param pk_seed Pointer to the public key seed. Must be n bytes long.
- * @param adrs Pointer to the address.
- * @param m Pointer to the message. Must be n bytes long. It will be overwritten with the hash.
-*/
-void F_inplace(const char* pk_seed, const ADRS* adrs, char* m);
+// /**
+//  * @brief Very Similar to F, but it overwrites the input array with the hash.
+//  * 
+//  * @param pk_seed Pointer to the public key seed. Must be n bytes long.
+//  * @param adrs Pointer to the address.
+//  * @param m Pointer to the message. Must be n bytes long. It will be overwritten with the hash.
+// */
+// void F_inplace(const char* pk_seed, const ADRS* adrs, char* m);
 
 
 /**
