@@ -28,16 +28,19 @@ void tearDown(void) {
 
 void test_function_wots_sign() {
     ADRS adrs = {0};
-    setLayerAddress(&adrs, 1);
-    setTreeAddress(&adrs, 1);
-    setTypeAndClear(&adrs, 5);
-    setKeyPairAddress(&adrs, 2);
-    setChainAddress(&adrs, 3);
-    setHashAddress(&adrs, 0);    
+    // setLayerAddress(&adrs, 1);
+    // setTreeAddress(&adrs, 1);
+    // setTypeAndClear(&adrs, 5);
+    // setKeyPairAddress(&adrs, 2);
+    // setChainAddress(&adrs, 3);
+    // setHashAddress(&adrs, 0);    
 
     char signature[SLH_PARAM_len * SLH_PARAM_n];
 
-    wots_sign(m, sk_seed, pk_seed, &adrs, signature);
+    char pk_zeros[SLH_PARAM_n] = {0};
+    char sk_zeros[SLH_PARAM_n] = {0};
+
+    wots_sign(m, sk_zeros, pk_zeros, &adrs, signature);
 
     const unsigned char expected[32] = {
         0xa3, 0x8d, 0x7c, 0x2c, 0x85, 0xdc, 0x51, 0x89,

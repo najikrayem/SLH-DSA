@@ -26,7 +26,7 @@ void T_len(const char* pk_seed, const ADRS* adrs, const char* m, char* out){
     shake_init_state
     shake_absorb(pk_seed, PK_SEED_BYTES)
     shake_absorb(adrs, sizeof(ADRS))
-    shake_absorb(m, SLH_SIGN_MD_LEN * SLH_PARAM_n)
+    shake_absorb(m, SLH_PARAM_len * SLH_PARAM_n)
     shake_sqeeze(out, SLH_PARAM_n)
 }
 

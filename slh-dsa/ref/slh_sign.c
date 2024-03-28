@@ -19,21 +19,21 @@ void wots_sign(const char* m, const char* sk_seed, const char* pk_seed, ADRS* ad
     uint64_t csum = 0;
 
     // Message 'm' is converted into base 'w' representation and stored in 'msg'
-    char msg[SLH_PARAM_len];
-    base_2b(m, strlen(m), SLH_PARAM_lgw, SLH_PARAM_len1, msg);
+    uint16_t msg[SLH_PARAM_len];
+    base_2b(m, SLH_PARAM_n, SLH_PARAM_lgw, SLH_PARAM_len1, msg);
     
     // Compute checksum by iterating over each character in 'msg'
-    for (uint64_t i = 0; i <= SLH_PARAM_len1 - 1; i++) {
-        csum = csum + SLH_PARAM_w - 1 - msg[i];
+    for (uint8_t i = 0; i < SLH_PARAM_len1; i++) {
+        csum += (SLH_PARAM_w - 1) - (uint64_t)(msg[i]);
     }
     
-    csum = csum << ((8 - ((SLH_PARAM_len2 * SLH_PARAM_lgw) % 8)) % 8);  // Checksum is left-shifted to fit into bytes
+    csum <<= ((8 - ((SLH_PARAM_len2 * SLH_PARAM_lgw) % 8)) % 8);  // Checksum is left-shifted to fit into bytes
     
-    char csum_bytes[CSUM_BYTES];
+    uint8_t csum_bytes[CSUM_BYTES];
     toByte(csum, csum_bytes, CSUM_BYTES);  // Convert checksum into a byte array
     
-    char *csum_base_w = msg + SLH_PARAM_len1;  // Pointer to the location where checksum will be stored in base 'w'
-    base_2b(csum_bytes, CSUM_BYTES, SLH_PARAM_lgw, SLH_PARAM_len2, csum_base_w);  // Convert csum to base 'w'
+
+    base_2b(csum_bytes, CSUM_BYTES, SLH_PARAM_lgw, SLH_PARAM_len2, msg + SLH_PARAM_len1);  // Convert csum to base 'w'
 
     
     ADRS skADRS;
@@ -42,17 +42,36 @@ void wots_sign(const char* m, const char* sk_seed, const char* pk_seed, ADRS* ad
     setTypeAndClear(&skADRS, WOTS_PRF);
     setKeyPairAddress(&skADRS, getKeyPairAddress(adrs));
 
-    char sk[SLH_PARAM_n];
-    char* sig_out_tmp = sig_out;
-    for (uint32_t i = 0; i < SLH_PARAM_len; i++) {  // Loop generates signature for each segment of msg
+    uint8_t sk[SLH_PARAM_n];
+    //char* sig_out_tmp = sig_out;
+    for (uint8_t i = 0; i < SLH_PARAM_len; i++) {  // Loop generates signature for each segment of msg
         setChainAddress(&skADRS, i);                // Sets chain address in ADRS structure for each segment
 
         PRF(pk_seed, sk_seed, &skADRS, sk);   // PRF is applied to the seed and ADFS structure to generate secret key value 'sk'
         
         setChainAddress(adrs, i);             // Set chain address for signature output
 
-        chain(sk, 0, msg[i], pk_seed, adrs, sig_out_tmp);   // Computes hash chain for the signature
-        sig_out_tmp += SLH_PARAM_n;            // Move pointer to the next segment of the signature
+        chain(sk, 0, msg[i], pk_seed, adrs, sig_out);   // Computes hash chain for the signature
+
+        // #if DEBUG_ENABLED
+        //     printf("WOTS+ Signature: For Loop, i = %d\n", i);
+        //     printf("WOTS+ Signature: sk = ");
+        //     for (int j = 0; j < SLH_PARAM_n; j++){
+        //         printf("%u, ", (unsigned char)sk[j]);
+        //     }
+        //     printf("\n");
+
+        //     printf("WOTS+ Signature: msg[i] = %u\n", msg[i]);
+
+        //     printf("WOTS+ Signature: sig_out = ");
+        //     for (int j = 0; j < SLH_PARAM_n; j++){
+        //         printf("%u, ", (unsigned char)sig_out[j]);
+        //     }
+
+        //     printf("\n\n");
+        // #endif
+        
+        sig_out += SLH_PARAM_n;            // Move pointer to the next segment of the signature
     }
 }
 
@@ -67,7 +86,7 @@ void wots_sign(const char* m, const char* sk_seed, const char* pk_seed, ADRS* ad
  * @param idx Index of the WOTS+ node within the XMSS tree
  * @param pk_seed Pointer to the public key seed. Must be n bytes long
  * @param adrs Pointer to the address
- * @param sig_out Pointer to the array to store the generated XMSS signature. Must be n*(hprime + len) bytes long.
+ * @param sig_out Pointer to the array to store the generated XMSS signature. Must be XMSS_SIG_LEN bytes long.
 */
 void xmss_sign(const char *m, const char *sk_seed, uint32_t idx, const char *pk_seed, ADRS *adrs, char *sig_out) {
 
@@ -95,9 +114,9 @@ void xmss_sign(const char *m, const char *sk_seed, uint32_t idx, const char *pk_
  * @param pk_seed Pointer to the public key seed. Must be n bytes long.
  * @param idx_tree Index of the XMSS tree at the lowest hypertree level. Must be less 2^(h - hprime).
  * @param idx_leaf Index of the WOTS+ key within the XMSS tree. Must be less than 2^hprime.
- * @param sig_out Pointer to the array to store the generated hypertree signature. Must be n*(h + d * len) bytes long.
+ * @param sig_out Pointer to the array to store the generated hypertree signature. Must be HT_SIG_LEN bytes long.
 */
-void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t idx_tree, uint32_t idx_leaf, char* sig_out){
+static void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t idx_tree, uint32_t idx_leaf, char* sig_out){
 
     // TODO
     // #if DATA_CHECKS_ENABLED
@@ -116,13 +135,21 @@ void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t i
 
     xmss_sign(m, sk_seed, idx_leaf, pk_seed, &adrs, sig_tmp);
 
-    char root[SLH_PARAM_n] = {0};
+    char root[SLH_PARAM_n];
     xmss_PKFromSig(idx_leaf, sig_tmp, m, pk_seed, &adrs, root);
     sig_tmp += XMSS_SIG_LEN;
 
+    // #if DEBUG_ENABLED
+    //     printf("xmss_pkFromSig: root = ");
+    //     for (int j = 0; j < SLH_PARAM_n; j++){
+    //         printf("%u ", (unsigned char)root[j]);
+    //     }
+    //     printf("\n\n");
+    // #endif
+
     for(uint8_t j = 1; j < SLH_PARAM_d; j++){
 
-        idx_leaf = idx_tree && HPRIME_LSB_MASK;
+        idx_leaf = idx_tree & HPRIME_LSB_MASK;
         idx_tree >>= SLH_PARAM_hprime;
 
         setLayerAddress(&adrs, j);
@@ -151,7 +178,7 @@ void ht_sign(const char* m, const char* sk_seed, const char* pk_seed, uint64_t i
  * @param idx Index of the secret key. TODO
  * @param fors_sk Pointer to the array to store the generated FORS private-key value. Must be n bytes long.
 */
-void fors_SKgen(const char* sk_seed, const char* pk_seed, const ADRS* adrs, uint32_t idx, char* fors_sk){
+static void fors_SKgen(const char* sk_seed, const char* pk_seed, const ADRS* adrs, uint32_t idx, char* fors_sk){
     ADRS skADRS;
     memcpy(&skADRS, adrs, sizeof(ADRS));
     setTypeAndClear(&skADRS, FORS_PRF);
@@ -225,29 +252,24 @@ char* fors_node(const char* sk_seed, uint32_t i, uint32_t z, const char* pk_seed
  * @param adrs Pointer to the address.
  * @param pk_out Pointer to the array to store the generated FORS signature. Must fit FORS_SIG_LEN bytes.
 */
-void fors_sign(const char* md, const char* sk_seed, const char* pk_seed, ADRS* adrs, char* sig_out){
-    // TODO NK: this function is a big mess
+static void fors_sign(const char* md, const char* sk_seed, const char* pk_seed, ADRS* adrs, char* sig_out){
 
-    char* sig_tmp = sig_out;
-    uint32_t s;
-    uint64_t node_idx;
+    char* sig_fors = sig_out;
 
-    char indices[64];
+    uint16_t indices[SLH_PARAM_k];
     base_2b(md, SLH_SIGN_MD_LEN, SLH_PARAM_a, SLH_PARAM_k, indices);
 
 
-    for (uint32_t i = 0; i < SLH_PARAM_k; i++) {
-        fors_SKgen(sk_seed, pk_seed, adrs, (i << SLH_PARAM_a) + indices[i], sig_tmp);
-        sig_tmp += SLH_PARAM_n;
+    uint16_t s;
 
-        for (uint32_t j = 0; j < SLH_PARAM_a; j++) {
+    for (uint8_t i = 0; i < SLH_PARAM_k; i++) {
+        fors_SKgen(sk_seed, pk_seed, adrs, (i << SLH_PARAM_a) + ((uint32_t)(indices[i])), sig_fors);      // TODO NK: are we reading indices[i] correctly here?
+        sig_fors += SLH_PARAM_n;
 
-            s = (indices[i] >> j) ^ (uint32_t)1;
-            node_idx = (i << (SLH_PARAM_a - j)) + s;
-
-            fors_node(sk_seed, node_idx, j, pk_seed, adrs, sig_tmp);
-            sig_tmp += SLH_PARAM_n;
-
+        for (uint8_t j = 0; j < SLH_PARAM_a; j++) {
+            s = (indices[i] >> j) ^ 1;
+            fors_node(sk_seed, ((i << (SLH_PARAM_a - j)) + s), j, pk_seed, adrs, sig_fors);
+            sig_fors += SLH_PARAM_n;
         }
     }
 }
@@ -258,7 +280,12 @@ void slh_sign(const char* msg, uint64_t msg_len, const SK* sk, char* sig){
     ADRS adrs = {0};
 
     char randByte;
-    randBytes(&randByte, 1);
+    #if DEBUG_ENABLED
+        printf("No Randomiztion for debugging\n");
+        randByte = 0;
+    #else
+        randBytes(&randByte, 1);
+    #endif
 
     const char *opt_rand;
     char new_rand[SLH_PARAM_n];
@@ -273,7 +300,7 @@ void slh_sign(const char* msg, uint64_t msg_len, const SK* sk, char* sig){
     char* sig_tmp = sig;
 
     // Store randomizer at the beginning of the signature
-    PRF_msg(sk->prf, opt_rand, msg, msg_len, sig_tmp);
+    PRF_msg(sk->prf, opt_rand, msg, msg_len, sig_tmp);      //32bytes
     sig_tmp += SLH_PARAM_n;
 
 
@@ -303,13 +330,13 @@ void slh_sign(const char* msg, uint64_t msg_len, const SK* sk, char* sig){
     setKeyPairAddress(&adrs, idx_leaf);
 
 
-    fors_sign(md, sk->seed, sk->pk.seed, &adrs, sig_tmp);
+    fors_sign(md, sk->seed, sk->pk.seed, &adrs, sig_tmp);       //11200 bytes
 
     // Get FORS Key
     char PK_fors[SLH_PARAM_n];
     fors_pkFromSig(sig_tmp, md, sk->pk.seed, &adrs, PK_fors);
     sig_tmp += FORS_SIG_LEN;
 
-    ht_sign(PK_fors, sk->seed, sk->pk.seed, idx_tree, idx_leaf, sig_tmp);
+    ht_sign(PK_fors, sk->seed, sk->pk.seed, idx_tree, idx_leaf, sig_tmp);       //38,624 bytes
 
 }

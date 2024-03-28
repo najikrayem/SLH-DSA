@@ -77,6 +77,11 @@ static inline uint32_t getTreeIndex(const ADRS* adrs){
     return BE32(adrs->w3);}
 
 static inline void setChainAddress(ADRS* adrs, uint32_t idx_chain){
+    #if DATA_CHECKS_ENABLED
+        if ((adrs->type != WOTS_HASH) || (adrs->type != WOTS_PRF)){
+            // TODO THROW ERROR
+        }
+    #endif
     adrs->w2 = BE32(idx_chain);}
 
 static inline void setTreeHeight(ADRS* adrs, uint32_t tree_height){
@@ -113,16 +118,14 @@ static inline const char* getXMSSAUTH(const char* sig_xmss){
  * AUTHs in the FORS signature.
 */
 static inline const char* getSK (const char* fors_sig, uint8_t idx){
-    const char *ret = fors_sig;
-    return ret + (idx * (SLH_PARAM_n * (SLH_PARAM_a + 1)));}
+    return fors_sig + (idx * (SLH_PARAM_n * (SLH_PARAM_a + 1)));}
 
 
 /**
- * @brief Get a pointer to the AUTH value of tree at index 0 <= idx < k in 
- * the FORS signature. See getSK for more details.
+ * @brief TODO
 */
 static inline const char* getAUTH(const char* fors_sig, uint8_t idx){
-    return getSK(fors_sig, idx) + SLH_PARAM_n;}
+    return fors_sig + (((idx * (SLH_PARAM_a + 1)) + 1) * SLH_PARAM_n);}
 
 
 // Algorithm 1
@@ -143,7 +146,7 @@ uint64_t toInt(const uint8_t *X, uint8_t n);
 /**
  * @brief Convert an integer to a byte string.
  * 
- * @param x "integer" to be converted.
+ * @param x integer to be converted.
  * @param out Pointer to the output array that hold the byte string. Must be n bytes long.
  * @param out_len Length of the output
  * 
@@ -157,12 +160,12 @@ void toByte(uint64_t x, char* out, uint8_t out_len);
  * @brief Compute the base 2^b representation of X.
  * 
  * @param x Pointer to byte string 
- * @param in_len Length of the input. Must be at least ceil(out_len*b/8) bytes long
+ * @param in_len Length of the input. Must be at least ceil(out_len*b/8) bytes long. CURRENTLY UNUSED
  * @param b Base
  * @param out_len Length of the output
  * @param out Pointer to the output of length out_len
 */
-void base_2b(const char* x, uint64_t in_len, uint8_t b, uint64_t out_len, char* out);
+void base_2b(const char *x, uint64_t in_len, uint8_t b, uint8_t out_len, uint16_t *out);
 
 
 
@@ -180,7 +183,7 @@ void base_2b(const char* x, uint64_t in_len, uint8_t b, uint64_t out_len, char* 
  * @return char* out pointer, or NULL if (i + s) ≥ w
  * 
  */
-char* chain(const char* x, uint64_t i, uint64_t s, const char* pk_seed, ADRS* adrs, char* out);
+char* chain(const char* x, uint32_t i, uint32_t s, const char* pk_seed, ADRS* adrs, char* out);
 
 
 

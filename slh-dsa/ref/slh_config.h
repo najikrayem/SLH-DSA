@@ -79,7 +79,7 @@ SLH_DSA Hash Primitives can be defined as:
 */
 
 #define DATA_CHECKS_ENABLED 0       // NK TODO move this to CMakeLists.txt
-#define DEBUG_ENABLED 1             // NK TODO move this to CMakeLists.txt
+#define DEBUG_ENABLED 0             // NK TODO move this to CMakeLists.txt
 #define CONF_SLH_SHAKE 1            // NK TODO move this to CMakeLists.txt
 
 

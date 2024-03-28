@@ -6,6 +6,7 @@ build/test/slh_ds_test
 
 
 # Run basic sign verify test
-build/example/cli/GenerateKeys secret public
-build/example/cli/SignMessage secret build_script sig
-build/example/cli/VerifySignature public build_script sig
+rm sec pub sig
+build/example/cli/GenerateKeys sec pub
+build/example/cli/SignMessage sec msg sig
+build/example/cli/VerifySignature pub msg sig
