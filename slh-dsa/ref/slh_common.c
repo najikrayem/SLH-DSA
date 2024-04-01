@@ -32,15 +32,15 @@ uint64_t toInt(const uint8_t *X, uint8_t n) {
 void toByte(uint64_t x, char* out, uint8_t out_len){
     uint64_t total = x;
 
-    for(uint64_t i = 0; i < strlen(out); i++){
-        out[strlen(out) - 1 - i] = (char) (total % 256);
+    for(uint64_t i = 0; i < out_len; i++){
+        out[out_len - 1 - i] = (uint8_t) total;
         total >>= 8;
     }
 }
 
 
 
-char* chain(const char* x, uint64_t i, uint64_t s, const char* pk_seed, ADRS* adrs, char* out){
+char* chain(const char* x, uint32_t i, uint32_t s, const char* pk_seed, ADRS* adrs, char* out){
     if ((i + s) >= SLH_PARAM_w) {
         #if DEBUG_ENABLED
             printf("Invalid input for chain, returning NULL\n");
@@ -48,13 +48,15 @@ char* chain(const char* x, uint64_t i, uint64_t s, const char* pk_seed, ADRS* ad
         return NULL;
     }
 
-    setHashAddress(adrs, i);
-    F(pk_seed, adrs, x, out);
+    char tmp[SLH_PARAM_n];
+    memcpy(tmp, x, SLH_PARAM_n);        //TODO NK
 
-    for (uint32_t j = (i + 1); j < (i + s); j++) {
+    for (uint32_t j = i; j < (i + s); j++) {
         setHashAddress(adrs, j);
-        F(pk_seed, adrs, out, out);
+        F(pk_seed, adrs, tmp, tmp);
     }
+
+    memcpy(out, tmp, SLH_PARAM_n); //TODO NK
 
     return out;    
 }
@@ -64,7 +66,7 @@ char* chain(const char* x, uint64_t i, uint64_t s, const char* pk_seed, ADRS* ad
 void wots_PKgen(const char* sk_seed, const char* pk_seed, ADRS* adrs, char* pk_out){
     
     ADRS skADRS; // Copy address to create key generation key address
-    memcpy(&skADRS, adrs, sizeof(ADRS));
+    memcpy(&skADRS, adrs, sizeof(ADRS));        //TODO NK
 
     setTypeAndClear(&skADRS, WOTS_PRF);
     setKeyPairAddress(&skADRS, getKeyPairAddress(adrs));
@@ -72,6 +74,7 @@ void wots_PKgen(const char* sk_seed, const char* pk_seed, ADRS* adrs, char* pk_o
     char sk[SLH_PARAM_n];
     char tmp[SLH_PARAM_len * SLH_PARAM_n];
     char *tmp_tmp = tmp;
+
     for (uint32_t i = 0; i < SLH_PARAM_len; i++) {
         setChainAddress(&skADRS, i);
         PRF(pk_seed, sk_seed, &skADRS, sk); // Compute secret value for chain i
@@ -81,7 +84,7 @@ void wots_PKgen(const char* sk_seed, const char* pk_seed, ADRS* adrs, char* pk_o
     }
     
     ADRS wotspkADRS;
-    memcpy(&wotspkADRS, adrs, sizeof(ADRS));
+    memcpy(&wotspkADRS, adrs, sizeof(ADRS));    //TODO NK
 
     setTypeAndClear(&wotspkADRS, WOTS_PK);
     setKeyPairAddress(&wotspkADRS, getKeyPairAddress(adrs));
@@ -92,7 +95,7 @@ void wots_PKgen(const char* sk_seed, const char* pk_seed, ADRS* adrs, char* pk_o
 
 char* xmss_node(const char* sk_seed, uint32_t i, uint32_t z, const char* pk_seed, ADRS* adrs, char* node){
     
-    if(z > SLH_PARAM_hprime || i >= (1 << (SLH_PARAM_hprime - z))){
+    if((z > SLH_PARAM_hprime) || (i >= (1 << (SLH_PARAM_hprime - z)))){
         #if DEBUG_ENABLED
             printf("Invalid input for xmss_node, returning NULL\n");
         #endif
@@ -149,12 +152,12 @@ void xmss_PKFromSig(uint32_t idx, const char* sig_xmss, const char* m, const cha
         setTreeHeight(adrs, k+1);
 
         if(((idx >> k) & 1) == 0){
-
+            // Even case
             setTreeIndex(adrs, getTreeIndex(adrs) >> 1);
             H_split(pk_seed, adrs, root_out, AUTH + (SLH_PARAM_n * k), root_out); // MD REVISIT: this might need to change based on how H is implemented/it's parameters
         
         } else{
-
+            // Odd case
             setTreeIndex(adrs, (getTreeIndex(adrs) - 1) >> 1);    
             H_split(pk_seed, adrs, AUTH + (SLH_PARAM_n * k), root_out, root_out); // MD REVISIT: this might need to change based on how H is implemented/it's parameters
         
@@ -163,20 +166,23 @@ void xmss_PKFromSig(uint32_t idx, const char* sig_xmss, const char* m, const cha
 }
 
 
-
-void base_2b(const char *x, uint64_t in_len, uint8_t b, uint64_t out_len, char *out) {
+//TODO Nk: b is 9 max, so we can use uint8_t for b, and uint16_t for each out element.
+// outlen is 64 max, so we can use uint8_t for out_len
+void base_2b(const char *x, uint64_t in_len, uint8_t b, uint8_t out_len, uint16_t *out) {
     uint64_t in = 0;
     uint64_t bits = 0;
-    uint64_t total = 0; // This will work for values of b specified in the standard
 
-    for (uint64_t i = 0; i < out_len; i++) {
+    uint16_t mask = (1 << b) - 1;
+
+    uint64_t total = 0; // This will work for values of b specified in the standard
+    for (uint8_t i = 0; i < out_len; i++) {
         while (bits < b) {
-            total = (total << 8) + x[in];
+            total = (total << 8) + (uint8_t)(x[in]);
             in++;
             bits += 8;
         }
         bits -= b;
-        out[i] = (char)(total >> bits) & ((1 << b) - 1);
+        out[i] = ((total >> bits) & mask);
     }
 }
 
@@ -187,7 +193,7 @@ void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *a
     
     char msg_csum[SLH_PARAM_len];
 
-    char msg[SLH_PARAM_len1 + SLH_PARAM_len2];
+    uint16_t msg[SLH_PARAM_len1 + SLH_PARAM_len2];
     base_2b(m, SLH_PARAM_n, SLH_PARAM_lgw, SLH_PARAM_len1, msg);
 
     // calculate checksum
@@ -206,7 +212,7 @@ void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *a
         setChainAddress(adrs, i);
         chain(( sig + (i * SLH_PARAM_n)),
                 msg[i],
-                SLH_PARAM_w - 1 - msg[i],
+                (SLH_PARAM_w - 1) - msg[i],
                 pk_seed,
                 adrs,
                 (tmp + (i * SLH_PARAM_n)));
@@ -223,10 +229,10 @@ void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *a
 
 void fors_pkFromSig(const char *sig_fors, const char *md, const char *pk_seed, ADRS *adrs, char *pk_out) {
     
-    const char *sk;
-    
-    char indices[SLH_PARAM_k];
+    uint16_t indices[SLH_PARAM_k];
     base_2b(md, SLH_SIGN_MD_LEN, SLH_PARAM_a, SLH_PARAM_k, indices);
+
+    const char *sk;
 
     char node_0[SLH_PARAM_n];
     char node_1[SLH_PARAM_n];
@@ -236,36 +242,62 @@ void fors_pkFromSig(const char *sig_fors, const char *md, const char *pk_seed, A
     const char *auth;
 
     char root[SLH_PARAM_k * SLH_PARAM_n];
+    char *root_tmp = root;
+
     for (uint8_t i = 0; i < SLH_PARAM_k; i++) {
         sk = getSK(sig_fors, i);
         setTreeHeight(adrs, 0);
-        setTreeIndex(adrs, (i << SLH_PARAM_a) + indices[i]);
+        setTreeIndex(adrs, (i << SLH_PARAM_a) + (uint32_t)(indices[i]));        //TODO NK are we reading indices[i] correctly?
         F(pk_seed, adrs, sk, node_0);
 
         auth = getAUTH(sig_fors, i);
+
+        // #if DEBUG_ENABLED
+        //     printf("Node 0, i = %u: ", i);
+        //     for (uint8_t j = 0; j < SLH_PARAM_n; j++) {
+        //         printf("%u ", (uint8_t)node_0[j]);
+        //     }
+        //     printf("\n");
+        //     printf("Auth = ");
+        //     for (uint8_t j = 0; j < SLH_PARAM_n; j++) {
+        //         printf("%u ", (uint8_t)auth[j]);
+        //     }
+        //     printf("\n");
+        // #endif
+
+
         for (uint8_t j = 0; j < SLH_PARAM_a; j++) {
             setTreeHeight(adrs, j+1);
+
             if (((indices[i] >> j) & 1) == 0) {
                 // Even case
-                setTreeIndex(adrs, (getTreeIndex(adrs) >> 2));
-                
-                memcpy(auth_node_buffer, node_0, SLH_PARAM_n);
-                memcpy(auth_node_buffer + SLH_PARAM_n, auth + (j * SLH_PARAM_n), SLH_PARAM_n);
-
-                H(pk_seed, adrs, auth_node_buffer, node_1);
+                setTreeIndex(adrs, (getTreeIndex(adrs) >> 1));
+                H_split(pk_seed, adrs, node_0, auth, node_0);
             }
             else {
                 // Odd case
                 setTreeIndex(adrs, ((getTreeIndex(adrs) - 1) >> 1));
-
-                memcpy(auth_node_buffer, auth + (j * SLH_PARAM_n), SLH_PARAM_n);
-                memcpy(auth_node_buffer + SLH_PARAM_n, node_0, SLH_PARAM_n);
-
-                H(pk_seed, adrs, auth_node_buffer, node_1);
+                H_split(pk_seed, adrs, auth, node_0, node_0);
             }
-            memcpy(node_0, node_1, SLH_PARAM_n);
+
+            // #if DEBUG_ENABLED
+            //     printf("Node 0, j = %u, case = %u, treeidx = %u: ", j, ((indices[i] >> j) & 1), getTreeIndex(adrs));
+            //     for (uint8_t k = 0; k < SLH_PARAM_n; k++) {
+            //         printf("%u ", (uint8_t)node_0[k]);
+            //     }
+            //     printf("\n");
+            //     printf("Auth = ");
+            //     for (uint8_t k = 0; k < SLH_PARAM_n; k++) {
+            //         printf("%u ", (uint8_t)auth[k]);
+            //     }
+            //     printf("\n");
+            // #endif
+
+
+            auth += SLH_PARAM_n;
         }
-        memcpy(root + (i * SLH_PARAM_n), node_0, SLH_PARAM_n);
+        memcpy(root_tmp, node_0, SLH_PARAM_n);      //TODO NK
+        root_tmp += SLH_PARAM_n;
     }
 
     ADRS forspkADRS;

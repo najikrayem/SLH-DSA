@@ -6,15 +6,15 @@
 
 // PublicKey struct
 typedef struct PublicKey{
-    char root[SLH_PARAM_n];
-    char seed[SLH_PARAM_n];
+    uint8_t seed[SLH_PARAM_n];
+    uint8_t root[SLH_PARAM_n];
 } PK;
 
 
 // SecretKey struct
 typedef struct SecretKey{
-    char seed[SLH_PARAM_n];
-    char prf [SLH_PARAM_n];
+    uint8_t seed[SLH_PARAM_n];
+    uint8_t prf [SLH_PARAM_n];
     PK pk;
 } SK;
 

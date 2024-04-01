@@ -95,13 +95,29 @@ void test_function_chain() {
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, out, SLH_PARAM_n);
 }
 
+void test_base_2b() {
+    uint8_t x[8] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0};
+    uint16_t out[4];// = {0};
+    uint16_t expected[4] = {1, 2, 3, 4};
+    base_2b(x, 8, 4, 4, out);
+    TEST_ASSERT_EQUAL_HEX16_ARRAY(expected, out, 4);
+
+
+    uint8_t x1[5] = {0x98, 0x76, 0x54, 0x32, 0x10};
+    uint16_t out1[10];// = {0};
+    uint16_t expected1[10] = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    base_2b(x1, 5, 4, 10, out1);
+    TEST_ASSERT_EQUAL_HEX16_ARRAY(expected1, out1, 10);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_function_BE32);
     RUN_TEST(test_function_BE64);
     RUN_TEST(test_function_toInt);
     RUN_TEST(test_function_chain);
-    
+    RUN_TEST(test_base_2b);
+
     return UNITY_END();
 }
 

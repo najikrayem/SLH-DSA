@@ -21,41 +21,70 @@
 - [x] getR
 - [x] getSIG_FORS
 - [x] getSIG_HT
-- [ ] H_msg
 - [x] Toint
 - [x] setTreeAddress
 - [x] setTypeAndClear
 - [x] setKeyPairAddress
-- [ ] fors_pkFromSig
+- [x] fors_pkFromSig
 - [x] ht_verify
 - [ ] randBytes
-- [ ] PRF_msg
 - [ ] fors_sign
 - [ ] ht_sign
 - [x] xmss_sign
 - [ ] xmss_PKFromSig
-- [ ] setLayerAddress
-- [ ] xmss_node
-- [ ] wots_sign
-- [ ] wots_PKgen
-- [ ] setTreeHeight
-- [ ] setTreeIndex
+- [x] xmss_node
+- [x] wots_PKgen
+- [x] setTreeHeight
+- [x] setTreeIndex
 - [x] H
 - [x] getXMSSSignature
 - [x] getWOTSSig
 - [x] getXMSSAUTH
 - [ ] wots_PKFromSig
-- [ ] getTreeIndex
+- [x] getTreeIndex
 - [ ] H_split
 - [ ] base_2b
 - [ ] toBytes
 - [ ] setChainAddress
+- [ ] setHashAddress
+- [ ] getSK
+- [x] getAUTH
+- [ ] fors_SKgen
+
+
+- [ ] F
+- [ ] wots_sign
+- [ ] PRF_msg
+- [ ] H_msg
 - [ ] chain
 - [ ] getKeyPairAddress
-- [ ] setHashAddress
-- [ ] F
+- [ ] setLayerAddress
+- [ ] PRF
 
 
 # Checked
 - [x] wots_PKFromSig
 - [x] chain
+- [x] T_len
+- [x] All hash functions
+- [x] fors_sign
+- [x] xmss_PKFromSig
+- [x] fors_SKgen
+- [x] base_2b
+- [x] toBytes
+
+# Passing unit tests
+- [x] BE32
+- [x] BE64
+- [x] toInt
+- [x] ADRS
+- [x] setLayerAddress
+- [x] setKeyPairAddress
+- [x] getKeyPairAddress
+- [x] chain
+- [x] H_msg
+- [x] PRF
+- [x] PRF_msg
+- [x] F
+- [x] wots_sign
+- [x] fors_node

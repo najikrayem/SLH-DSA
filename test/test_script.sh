@@ -6,6 +6,28 @@ build/test/slh_ds_test
 
 
 # Run basic sign verify test
-build/example/cli/GenerateKeys secret public
-build/example/cli/SignMessage secret build_script sig
-build/example/cli/VerifySignature public build_script sig
+mkdir -p build/test_temp
+cd build/test_temp
+cp ../../test/test_data/msg msg
+#rm sec pub sig
+echo
+echo "Generating keys..."
+../example/cli/GenerateKeys sec pub
+
+echo
+echo "Signing message..."
+../example/cli/SignMessage sec msg sig
+
+echo
+echo "Verifying Signature..."
+echo
+../example/cli/VerifySignature pub msg sig
+
+echo
+echo "------------------"
+echo "Testing IFS Verifier..."
+echo
+../example/qnx_ifs_verify_mount/IFSVerifyMount pub msg sig
+cd ../..
+
+

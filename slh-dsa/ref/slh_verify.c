@@ -48,7 +48,7 @@ static inline const char* getXMSSSignature (const char* sig_ht, uint8_t layer){
  * @return bool true if the signature is valid, false otherwise.
  * 
 */
-bool ht_verify(const char* m, const char* sig_ht, const char* pk_seed, uint64_t idx_tree, uint64_t idx_leaf, const char* pk_root){
+static bool ht_verify(const char* m, const char* sig_ht, const char* pk_seed, uint64_t idx_tree, uint64_t idx_leaf, const char* pk_root){
 
     ADRS adrs = {0};
     setTreeAddress(&adrs, idx_tree);
@@ -60,28 +60,63 @@ bool ht_verify(const char* m, const char* sig_ht, const char* pk_seed, uint64_t 
 
     xmss_PKFromSig(idx_leaf, sig_tmp, m, pk_seed, &adrs, tmp_node_1);
 
-    for(uint8_t j = 0; j < SLH_PARAM_d; j++){
+    for(uint8_t j = 1; j < SLH_PARAM_d; j++){
         idx_leaf = idx_tree & HPRIME_LSB_MASK;
         idx_tree >>= SLH_PARAM_hprime;
         setLayerAddress(&adrs, j);
         setTreeAddress(&adrs, idx_tree);
         sig_tmp = getXMSSSignature(sig_ht, j);
 
-        // If j is even
-        if ((j & 1) == 0){
-            // Check if xmss_PKFromSig can be done in place
-            xmss_PKFromSig(idx_leaf, sig_tmp, tmp_node_1, pk_seed, &adrs, tmp_node_2);
-        } else {
-            xmss_PKFromSig(idx_leaf, sig_tmp, tmp_node_2, pk_seed, &adrs, tmp_node_1);
-        }
+
+        xmss_PKFromSig(idx_leaf, sig_tmp, tmp_node_1, pk_seed, &adrs, tmp_node_2);
+
+        memcpy(tmp_node_1, tmp_node_2, SLH_PARAM_n);
+
+        #if DEBUG_ENABLED
+            printf("j = %u, ", j);
+            printf("idx_leaf = %u, ", idx_leaf);
+            printf("idx_tree = %u, ", idx_tree);
+            // printf("LayerAddress = %u, ", adrs.layer);
+            // printf("TreeAddress = %u, ",);
+            printf("tmp_node_1: ");
+            for (int i = 0; i < SLH_PARAM_n; i++){
+                printf("%u ", (uint8_t)tmp_node_1[i]);
+            }
+            printf("\n");
+        #endif
+
+
+        // // If j is even
+        // if ((j & 1) == 0){
+        //     // Check if xmss_PKFromSig can be done in place TODO NK
+        //     xmss_PKFromSig(idx_leaf, sig_tmp, tmp_node_1, pk_seed, &adrs, tmp_node_2);
+        // } else {
+        //     xmss_PKFromSig(idx_leaf, sig_tmp, tmp_node_2, pk_seed, &adrs, tmp_node_1);
+        // }
     }
 
-    // if d-1 is even 
-    if (((SLH_PARAM_d - 1) & 1) == 0){
-        return (memcmp(tmp_node_2, pk_root, SLH_PARAM_n) == 0);
-    } else {
-        return (memcmp(tmp_node_1, pk_root, SLH_PARAM_n) == 0);
-    }
+    // #if DEBUG_ENABLED
+    //     printf("tmp_node_1: ");
+    //     for (int i = 0; i < SLH_PARAM_n; i++){
+    //         printf("%u ", tmp_node_1[i]);
+    //     }
+    //     printf("\n");
+    //     printf("pk_root: ");
+    //     for (int i = 0; i < SLH_PARAM_n; i++){
+    //         printf("%u ", pk_root[i]);
+    //     }
+    //     printf("\n");
+    // #endif
+
+    return (memcmp(tmp_node_1, pk_root, SLH_PARAM_n) == 0);
+
+
+    // // if d-1 is even 
+    // if (((SLH_PARAM_d - 1) & 1) == 0){
+    //     return (memcmp(tmp_node_2, pk_root, SLH_PARAM_n) == 0);
+    // } else {
+    //     return (memcmp(tmp_node_1, pk_root, SLH_PARAM_n) == 0);
+    // }
 }
 
 
@@ -122,8 +157,18 @@ bool slh_verify(const char *msg, uint64_t msg_len, const char *sig, const PK *pk
     setKeyPairAddress(&adrs, idx_leaf);
 
 
-    char PK_fors[SLH_PARAM_n];
+    uint8_t PK_fors[SLH_PARAM_n];
     fors_pkFromSig(sig_fors, md, pk->seed, &adrs, PK_fors);
+
+    // #if DEBUG_ENABLED
+    //     printf("PK_fors = ");
+    //     for (int i = 0; i < SLH_PARAM_n; i++){
+    //         printf("%u ", (uint8_t)PK_fors[i]);
+    //     }
+    //     printf("\n");
+    // #endif
+
+
 
     // Verify hypertree
     return ht_verify(PK_fors, sig_ht, pk->seed, idx_tree, idx_leaf, pk->root);

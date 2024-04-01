@@ -1,0 +1,30 @@
+BE32
+
+
+GenerateKeys: Also verified against Python
+main
+    slh_keygen
+        randBytes[SKIPPED]
+        setLayerAddress
+        xmss_node
+            setTypeAndClear
+            setKeyPairAddress
+            wots_PKgen
+                setTypeAndClear
+                getKeyPairAddress
+                setKeyPairAddress
+                chain
+                    setHashAddress
+                getKeyPairAddress
+                setKeyPairAddress
+            setTypeAndClear
+            setTreeHeight
+        memcpy
+    fwrite
+    fwrite
+    fclose
+    fclose
+
+
+
+
