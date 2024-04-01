@@ -1,2 +1,2 @@
-#add_subdirectory(qnx_ifs_verify)
+add_subdirectory(qnx_ifs_verify_mount)
 add_subdirectory(cli)
