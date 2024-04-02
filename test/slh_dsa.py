@@ -657,87 +657,139 @@ SLH_DSA_ALL = [ SLH_DSA_SHA2_128f,  SLH_DSA_SHA2_128s,
 #----------------------------------------------------------------------------------------------
 
 # Global parameters
-SK_SEED = bytes.fromhex('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
-PK_SEED = bytes.fromhex('fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210')
-MESSAGE = b"abcdefghijklmnopqrstuvwxyz123456"
+sk_seed = bytes.fromhex('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
+pk_seed = bytes.fromhex('fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210')
+message = b"abcdefghijklmnopqrstuvwxyz123456"
 
 pk_root = b"fedcba9876543210987654321abcdefg"
 randomizer = b"123456789123456789abcdefabcdefab"
 sk_prf   = b"zlmnopqrstuv12345678901234567890"
 opt_rand = b"qrstuvwxyz9876543210012345678900"
 
+def test_to_byte():
+    x = 123456789
+    n = 4
+    slh_dsa = SLH_DSA(n=32)
+    result = slh_dsa.to_byte(x, n)
+    print("test_to_byte output:", result.hex())
+
 def test_chain():
     adrs = ADRS()
     slh_dsa = SLH_DSA(n=32)
 
-    output = slh_dsa.chain(MESSAGE, 0, 5, PK_SEED, adrs)
+    output = slh_dsa.chain(message, 0, 5, pk_seed, adrs)
     print("test_chain output:", output.hex())
     print("\n")
     
 def test_wots_sign():
     adrs = ADRS()
-    adrs.set_layer_address(1)
-    adrs.set_tree_address(1)
-    adrs.set_type_and_clear(5)
-    adrs.set_key_pair_address(2)
-    adrs.set_chain_address(3)
-    adrs.set_hash_address(0)
-
     slh_dsa = SLH_DSA(n=32)
 
-    output = slh_dsa.wots_sign(MESSAGE, SK_SEED, PK_SEED, adrs)
-    print("test_wots_sign output:", output.hex())
-    print("\n")
+    pk_zeros = bytearray(b'\x00' * 32)
+    sk_zeros = bytearray(b'\x00' * 32)
+    outputOne = slh_dsa.wots_sign(message, sk_zeros, pk_zeros, adrs)
+    
+    print("test_wots_sign outputOne:", outputOne.hex()[:64])
+    
+    outputTwo = slh_dsa.wots_sign(message, sk_seed, pk_seed, adrs)
+    print("test_wots_sign outputTwo:", outputTwo.hex()[:64])
+
+def test_xmss_node():
+    i = 0
+    z = 0
+    adrs = ADRS()
+    slh_dsa = SLH_DSA(n=32)
+    node = slh_dsa.xmss_node(sk_seed, i, z, pk_seed, adrs)
+    print("test_xmss_node output:", node.hex()[:64])    
+    
+def test_xmss_sign():
+    idx = 4
+
+    adrs = ADRS()
+    slh_dsa = SLH_DSA(n=32)
+
+    signature = slh_dsa.xmss_sign(message, sk_seed, idx, pk_seed, adrs)
+
+    print("test_xmss_sign (first 32 bytes):", signature.hex()[:64])
+
+def test_ht_sign():
+    i_tree = 2
+    i_leaf = 3
+
+    slh_dsa = SLH_DSA(n=32)
+    sig_ht = slh_dsa.ht_sign(message, sk_seed, pk_seed, i_tree, i_leaf)
+
+    # print first 32 bytes
+    print("test_ht_sign output: ", sig_ht.hex()[:64])
 
 def test_fors_node():
     slh_dsa = SLH_DSA(n=32)
     adrs = ADRS()
     
     # Test for a leaf node
-    leaf_node = slh_dsa.fors_node(SK_SEED, 0, 0, PK_SEED, adrs)
+    leaf_node = slh_dsa.fors_node(sk_seed, 0, 0, pk_seed, adrs)
     print(f"Leaf node: {leaf_node.hex()}")
     print("\n")
 
     # Test for an intermediate node
-    intermediate_node = slh_dsa.fors_node(SK_SEED, 0, 1, PK_SEED, adrs)
+    intermediate_node = slh_dsa.fors_node(sk_seed, 0, 1, pk_seed, adrs)
     print(f"Intermediate node: {intermediate_node.hex()}")
     print("\n")
 
 
+def test_fors_sign():
+    slh_dsa = SLH_DSA(n=32)
+    adrs = ADRS()
+    out_hash = slh_dsa.h_msg(randomizer, pk_seed, pk_root, message)
+    print("test_fors_sign out hash: ", out_hash.hex()[:64])
+    
+    sig_fors = slh_dsa.fors_sign(out_hash, sk_seed, pk_seed, adrs)
+    
+    print("test_fors_sign sig_fors: ", sig_fors.hex()[:64])
+
 # this one prints like 2 extra bytes and i couldn't figure out why. just copy the first 32 bytes for actual tests
 def test_hmsg():
     slh_dsa = SLH_DSA(n=32)
-    output = slh_dsa.shake_h_msg(randomizer[:32], PK_SEED, pk_root[:32], MESSAGE[:32])
+    output = slh_dsa.shake_h_msg(randomizer[:32], pk_seed, pk_root[:32], message[:32])
     print("test_hmsg output:", output.hex())
 
 def test_shake_prf_msg():
     slh_dsa = SLH_DSA(n=32)
-    output = slh_dsa.shake_prf_msg(sk_prf, opt_rand, MESSAGE)
+    output = slh_dsa.shake_prf_msg(sk_prf, opt_rand, message)
     print("test_shake_prf_msg output:", output.hex())
 
 def test_shake_prf():
     adrs = ADRS()
     slh_dsa = SLH_DSA(n=32)
-    output = slh_dsa.shake_prf(PK_SEED, SK_SEED, adrs)
+    output = slh_dsa.shake_prf(pk_seed, sk_seed, adrs)
     print("test_shake_prf output:", output.hex())
 
 def test_shake_f():
     adrs = ADRS()
     slh_dsa = SLH_DSA(n=32)
-    output = slh_dsa.shake_f(PK_SEED, adrs, MESSAGE)
+    output = slh_dsa.shake_f(pk_seed, adrs, message)
     print("test_shake_f output:", output.hex())
     
 def test_shake_h():
     adrs = ADRS()
     slh_dsa = SLH_DSA(n=32)
-    output = slh_dsa.sha512_h(PK_SEED, adrs, MESSAGE)
+    output = slh_dsa.sha512_h(pk_seed, adrs, message)
     print("test_shake_h output:", output.hex())
+
+def test_fors_SKgen():
+    adrs = ADRS()
+    slh_dsa = SLH_DSA(n=32)
+    idx = 42
+    
+    output = slh_dsa.fors_sk_gen(sk_seed, pk_seed, adrs, idx)
+    print("fors_sk_gen output: ", output.hex())
+
 
 def main():
     #test_to_int()
     #test_to_byte()
     #test_base_2b()
-    test_chain()
+    #test_chain()
     #test_wots_pkgen()
     test_wots_sign()
     #test_wots_pk_from_sig()
@@ -747,14 +799,15 @@ def main():
     #test_ht_sign()
     #test_ht_verify()
     #test_fors_SKgen()
-    test_fors_node()
+    #test_fors_node()
     #test_fors_sign()
     #test_fors_pkFromSig()
-    test_hmsg()
-    test_shake_prf_msg()
-    test_shake_prf()
-    test_shake_f()
-    test_shake_h()
+    #test_hmsg()
+    #test_h()
+    #test_shake_prf_msg()
+    #test_shake_prf()
+    #test_shake_f()
+    #test_shake_h()
     
 
 if __name__ == "__main__":
