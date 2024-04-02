@@ -2,6 +2,10 @@
 #include "slh_common.h"
 
 char m[SLH_PARAM_n] = "abcdefghijklmnopqrstuvwxyz123456";
+char randomizer[SLH_PARAM_n] = "123456789123456789abcdefabcdefab";
+char pk_root[PK_ROOT_BYTES] = "fedcba9876543210987654321abcdefg";
+char sk_prf[SK_PRF_BYTES] = "zlmnopqrstuv12345678901234567890";
+char opt_rand[SLH_PARAM_n] = "qrstuvwxyz9876543210012345678900";
 
 char pk_seed[PK_SEED_BYTES] = {
     0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
@@ -10,6 +14,12 @@ char pk_seed[PK_SEED_BYTES] = {
     0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10
 };
 
+char sk_seed[SK_SEED_BYTES] = {
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
+    0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef
+};
 
 void setUp(void) {
     // set stuff up here
@@ -95,6 +105,16 @@ void test_function_chain() {
     TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, out, SLH_PARAM_n);
 }
 
+void test_function_toByte() {
+    uint64_t x = 123456789;
+    uint8_t out[4];
+    toByte(x, out, sizeof(out));
+
+    uint8_t expected[4] = {0x07, 0x5B, 0xCD, 0x15};
+
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, out, sizeof(out));
+}
+
 void test_base_2b() {
     uint8_t x[8] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0};
     uint16_t out[4];// = {0};
@@ -110,13 +130,33 @@ void test_base_2b() {
     TEST_ASSERT_EQUAL_HEX16_ARRAY(expected1, out1, 10);
 }
 
+void test_function_xmss_node() {
+    uint32_t i = 0;
+    uint32_t z = 0;
+    ADRS adrs = {0};
+    char node[32];
+    xmss_node(sk_seed, i, z, pk_seed, &adrs, node);
+
+    const unsigned char expected[SLH_PARAM_n] = {
+        0x57, 0xa6, 0x8b, 0x93, 0x77, 0x9b, 0xbb, 0x8a,
+        0x53, 0x99, 0x8c, 0x68, 0x03, 0xa7, 0x12, 0xc4,
+        0x9e, 0x9e, 0xfd, 0x89, 0x9d, 0x34, 0xcf, 0x59,
+        0xb7, 0x97, 0xde, 0xa3, 0x57, 0x28, 0x25, 0x02
+    };
+
+    TEST_ASSERT_EQUAL_HEX8_ARRAY(expected, node, SLH_PARAM_n);
+
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_function_BE32);
     RUN_TEST(test_function_BE64);
     RUN_TEST(test_function_toInt);
     RUN_TEST(test_function_chain);
+    RUN_TEST(test_function_toByte);
     RUN_TEST(test_base_2b);
+    RUN_TEST(test_function_xmss_node);
 
     return UNITY_END();
 }

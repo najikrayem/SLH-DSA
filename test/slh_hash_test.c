@@ -99,7 +99,7 @@ void test_function_F(){
 int main(void) {
     UNITY_BEGIN();
 
-    //RUN_TEST(test_function_H_msg);
+    RUN_TEST(test_function_H_msg);
     RUN_TEST(test_function_PRF);
     RUN_TEST(test_function_PRF_msg);
     RUN_TEST(test_function_F);
