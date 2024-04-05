@@ -45,6 +45,10 @@ static void store64(uint8_t *x, uint64_t u) {
     }
 }
 
+
+#ifndef ARMV8A_CORTEXA72_OPTIMIZED
+
+
 /* Keccak round constants */
 static const uint64_t KeccakF_RoundConstants[NROUNDS] = {
     0x0000000000000001ULL, 0x0000000000008082ULL,
@@ -330,6 +334,16 @@ static void KeccakF1600_StatePermute(uint64_t *state) {
     state[23] = Aso;
     state[24] = Asu;
 }
+
+#else   //Not the reference implementation
+#include "../../armv8/SHAKE256/KECCAK.h"
+
+//extern void KeccakF1600_StatePermute_ARMv8A(uint64_t *state);
+
+#define KeccakF1600_StatePermute KeccakF1600_StatePermute_ARMv8A
+
+#endif  //ARMV8A_CORTEXA72_OPTIMIZED
+
 
 /*************************************************
  * Name:        keccak_absorb

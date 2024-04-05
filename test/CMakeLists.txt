@@ -18,3 +18,8 @@ add_executable(slh_hash_test
 add_executable(slh_ds_test
     slh_ds_test.c
 )
+
+add_executable(keccak_armv8a_cortexa72_test
+    keccak_armv8a_cortexa72_test.c
+)
+target_link_libraries(keccak_armv8a_cortexa72_test keccak_armv8a_cortexa72)
