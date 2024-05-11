@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.22.1)
 
 # Set the project name
-project(SLH_DSA LANGUAGES C)
+project(SLH_DSA LANGUAGES C ASM)
 
 # Add compiler flags
 #add_compile_options(-march=armv8-a)
 
 # GDB TODO
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
+
+set(CMAKE_USE_RELATIVE_PATHS ON)
 
 # set verbose makefile
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
