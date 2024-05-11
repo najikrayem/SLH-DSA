@@ -1,7 +1,0 @@
-: '
-@echo off
-echo Hello from Windows!
-goto :eof
-' :
-
-echo "Hello from Unix!"

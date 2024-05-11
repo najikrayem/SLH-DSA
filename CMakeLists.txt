@@ -16,7 +16,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_VERBOSE_MAKEFILE ON)
 endif()
 
-# Define option to strip the binary
+# Define the option to strip the binary
 option(STRIP_BINARY "Strip the binary" ON)
 # Strip the binary if the option is ON and the build type is NOT Debug
 if(STRIP_BINARY AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
