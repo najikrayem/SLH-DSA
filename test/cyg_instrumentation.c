@@ -10,21 +10,36 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <execinfo.h>
+#include <dlfcn.h>
 
 #ifdef __QNX__
-    #include <dlfcn.h>
     #include <sys/neutrino.h>
 #else
-    #include <dlfcn.h>
+
     #include <time.h>
-    // TODO this only works to x86
-    static __inline__ uint64_t ClockCycles(void)
-        __attribute__((no_instrument_function));
-    static __inline__ uint64_t ClockCycles(void) {
-        unsigned int lo, hi;
-        __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-        return ((uint64_t)hi << 32) | lo;
-    }
+
+    // check if arm or x86
+    #if defined(__arm__) || defined(__aarch64__)
+    
+        static __inline__ uint64_t ClockCycles(void)
+            __attribute__((no_instrument_function));
+        static __inline__ uint64_t ClockCycles(void) {
+            unsigned int value;
+            __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0" : "=r" (value));
+            return value;
+        }
+    
+    #elif defined(__x86_64__) || defined(__i386__)
+        
+        static __inline__ uint64_t ClockCycles(void)
+            __attribute__((no_instrument_function));
+        static __inline__ uint64_t ClockCycles(void) {
+            unsigned int lo, hi;
+            __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+            return ((uint64_t)hi << 32) | lo;
+        }
+
+    #endif
 #endif
 
 

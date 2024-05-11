@@ -5,17 +5,17 @@ if [ -d "build" ]; then
 fi
 
 # Check target architecture input argument. Should be either aarch64_unix, x86_64_unix, or aaarch64_qnx
-if [ "$1" == "aarch64_unix" ]; then
+if [ "$1" = "aarch64_unix" ]; then
 
     export PROCESSOR="aarch64le"
     cmake -G "Unix Makefiles" -S . -B build -DCMAKE_TOOLCHAIN_FILE=linux_arm.cmake
 
-elif [ "$1" == "x86_64_unix" ]; then
+elif [ "$1" = "x86_64_unix" ]; then
     
     export PROCESSOR="x86_64"
     cmake -G "Unix Makefiles" -S . -B build -DCMAKE_TOOLCHAIN_FILE=linux_x86_64.cmake
 
-elif [ "$1" == "aarch64_qnx" ]; then
+elif [ "$1" = "aarch64_qnx" ]; then
     
     export PROCESSOR="aarch64le"
     cmake -G "Unix Makefiles" -S . -B build -DCMAKE_TOOLCHAIN_FILE=qnx800_aarch64le.cmake

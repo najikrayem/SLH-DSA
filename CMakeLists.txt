@@ -7,7 +7,7 @@ project(SLH_DSA LANGUAGES C ASM)
 #add_compile_options(-march=armv8-a)
 
 # GDB TODO
-set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
 set(CMAKE_USE_RELATIVE_PATHS ON)
 
@@ -27,7 +27,7 @@ endif()
 
 
 # Define the instrumentation option
-option(INSTRUMENTATION "Enable instrumentation" OFF)
+option(INSTRUMENTATION "Enable instrumentation" ON)
 # Link the instrumentation library to all targets if the option is ON
 if(INSTRUMENTATION)
     set(CMAKE_BUILD_TYPE Debug)
@@ -38,8 +38,8 @@ if(INSTRUMENTATION)
 
     add_library(cyg_instr STATIC test/cyg_instrumentation.c)
     # check if CMAKE_SYSTEM_NAME is linux
-    if(CMAKE_SYSTEM_NAME STREQUAL "LINUX")
-    # TODO NK
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(STATUS "Linux system detected; linking dl library")
         target_link_libraries(cyg_instr PUBLIC dl)
         target_link_options(cyg_instr PUBLIC -ldl)
     endif()
