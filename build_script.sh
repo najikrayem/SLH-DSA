@@ -10,4 +10,4 @@ cmake -G "Unix Makefiles" -S . -B build -DCMAKE_TOOLCHAIN_FILE=qnx800_aarch64le.
 
 cd build
 make verbose=3
-cd ..
+
