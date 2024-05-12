@@ -25,7 +25,7 @@
             __attribute__((no_instrument_function));
         static __inline__ uint64_t ClockCycles(void) {
             unsigned int value;
-            __asm__ __volatile__ ("mrc p15, 0, %0, c9, c13, 0" : "=r" (value));
+            __asm__ __volatile__ ("mrs %0, PMCCNTR_EL0" : "=r" (value));
             return value;
         }
     
@@ -64,17 +64,18 @@ void __cyg_profile_func_exit(void *func, void *caller) {
     current_depth--;
     uint64_t tot_cycles = end_cycles - start_cycles[current_depth];
 
-    Dl_info func_info;
-    dladdr(func, &func_info);
+    printf("FUNC: %p", func);
+    printf(", \tCYCLES: %" PRIu64 "\n", tot_cycles);
 
-    if (func_info.dli_sname) {
-        printf("FUNC: %s, \tCYCLES: %" PRIu64 "\n", func_info.dli_sname, tot_cycles);
-    } else {
-        printf("FUNC: %x, \tCYCLES: %" PRIu64 "\n", func, tot_cycles);
-        // printf("FUNC: ");
-        // print_function_name_from_address(caller);
-        // printf(", \tCYCLES: %" PRIu64 "\n", tot_cycles);
-    }
+
+    // Dl_info func_info;
+    // dladdr(func, &func_info);
+
+    // if (func_info.dli_sname) {
+    //     printf("FUNC: %s, \tCYCLES: %" PRIu64 "\n", func_info.dli_sname, tot_cycles);
+    // } else {
+    //     printf("FUNC: %x, \tCYCLES: %" PRIu64 "\n", func, tot_cycles);
+    // }
 
 }
 

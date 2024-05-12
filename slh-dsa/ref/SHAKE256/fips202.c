@@ -335,12 +335,104 @@ static void KeccakF1600_StatePermute(uint64_t *state) {
     state[24] = Asu;
 }
 
+/*************************************************
+ * Name:        keccak_inc_absorb
+ *
+ * Description: Incremental keccak absorb
+ *              Preceded by keccak_inc_init, succeeded by keccak_inc_finalize
+ *
+ * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
+ *                First 25 values represent Keccak state.
+ *                26th value represents either the number of absorbed bytes
+ *                that have not been permuted, or not-yet-squeezed bytes.
+ *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
+ *              - const uint8_t *m: pointer to input to be absorbed into s
+ *              - size_t mlen: length of input in bytes
+ **************************************************/
+static void keccak_inc_absorb(uint64_t *s_inc, const uint8_t *m,
+                              size_t mlen) {
+    uint64_t i;
+    uint8_t tmp;
+    register uint64_t tmp2;
+    register uint64_t tmp3;
+
+    printf("mlen = %lu\n", mlen);
+
+    while (mlen + s_inc[25] >= SHAKE256_RATE) {
+
+        tmp = SHAKE256_RATE - s_inc[25];
+
+        tmp2 = s_inc[25];
+        for (i = 0; i < tmp; i++) {
+            tmp3 = (uint64_t)m[i] << ((tmp2 & 0x07) << 3);
+            s_inc[tmp2 >> 3] ^= tmp3;
+            tmp2 ++;
+        }
+
+        mlen -= tmp;
+        m += tmp;
+        s_inc[25] = 0;
+
+        KeccakF1600_StatePermute(s_inc);
+    }
+
+    tmp2 = s_inc[25];
+    for (i = 0; i < mlen; i++) {
+        tmp3 = (uint64_t)m[i] << ((tmp2 & 0x07) << 3);
+        s_inc[tmp2 >> 3] ^= tmp3;
+        tmp2 ++;
+    }
+    s_inc[25] += mlen;
+    // TODO remove this
+    //printf("s_inc[25] = %lu\n", s_inc[25]);
+}
+
+
+// static void keccak_inc_absorb(uint64_t *s_inc, uint64_t r, const uint8_t *m,
+//                               size_t mlen) {
+//     uint64_t i;
+//     uint64_t tmp;
+//     uint64_t tmp2;
+
+       
+
+//     while (mlen + s_inc[25] >= r) {
+
+//         tmp = r - s_inc[25];
+
+//         for (i = 0; i < tmp; i++) {
+
+//             tmp2 = s_inc[25] + i;
+
+//             s_inc[tmp2 >> 3] ^= (uint64_t)m[i] << ((tmp2 & (uint64_t)0x07) << 3);
+//         }
+
+//         tmp = r - s_inc[25];
+
+//         mlen -= (size_t)tmp;
+//         m += (size_t)tmp;
+//         s_inc[25] = 0;
+
+//         KeccakF1600_StatePermute(s_inc);
+//     }
+
+//     for (i = 0; i < mlen; i++) {
+
+//         tmp2 = s_inc[25] + i;
+
+//         s_inc[tmp2 >> 3] ^= (uint64_t)m[i] << ((tmp2 & 0x07) << 3);
+//     }
+//     s_inc[25] += mlen;
+// }
+
+
 #else   //Not the reference implementation
 #include "../../armv8/SHAKE256/KECCAK.h"
 
 //extern void KeccakF1600_StatePermute_ARMv8A(uint64_t *state);
 
 #define KeccakF1600_StatePermute KeccakF1600_StatePermute_ARMv8A
+#define keccak_inc_absorb Keccak_Inc_Absorb_ARMv8A
 
 #endif  //ARMV8A_CORTEXA72_OPTIMIZED
 
@@ -435,43 +527,7 @@ static void keccak_inc_init(uint64_t *s_inc) {
     s_inc[25] = 0;
 }
 
-/*************************************************
- * Name:        keccak_inc_absorb
- *
- * Description: Incremental keccak absorb
- *              Preceded by keccak_inc_init, succeeded by keccak_inc_finalize
- *
- * Arguments:   - uint64_t *s_inc: pointer to input/output incremental state
- *                First 25 values represent Keccak state.
- *                26th value represents either the number of absorbed bytes
- *                that have not been permuted, or not-yet-squeezed bytes.
- *              - uint32_t r: rate in bytes (e.g., 168 for SHAKE128)
- *              - const uint8_t *m: pointer to input to be absorbed into s
- *              - size_t mlen: length of input in bytes
- **************************************************/
-static void keccak_inc_absorb(uint64_t *s_inc, uint32_t r, const uint8_t *m,
-                              size_t mlen) {
-    size_t i;
 
-    /* Recall that s_inc[25] is the non-absorbed bytes xored into the state */
-    while (mlen + s_inc[25] >= r) {
-        for (i = 0; i < r - s_inc[25]; i++) {
-            /* Take the i'th byte from message
-               xor with the s_inc[25] + i'th byte of the state; little-endian */
-            s_inc[(s_inc[25] + i) >> 3] ^= (uint64_t)m[i] << (8 * ((s_inc[25] + i) & 0x07));
-        }
-        mlen -= (size_t)(r - s_inc[25]);
-        m += r - s_inc[25];
-        s_inc[25] = 0;
-
-        KeccakF1600_StatePermute(s_inc);
-    }
-
-    for (i = 0; i < mlen; i++) {
-        s_inc[(s_inc[25] + i) >> 3] ^= (uint64_t)m[i] << (8 * ((s_inc[25] + i) & 0x07));
-    }
-    s_inc[25] += mlen;
-}
 
 /*************************************************
  * Name:        keccak_inc_finalize
@@ -539,7 +595,7 @@ void shake256_inc_init(uint64_t *s_inc) {
 }
 
 void shake256_inc_absorb(uint64_t *s_inc, const uint8_t *input, size_t inlen) {
-    keccak_inc_absorb(s_inc, SHAKE256_RATE, input, inlen);
+    keccak_inc_absorb(s_inc, input, inlen);
 }
 
 void shake256_inc_finalize(uint64_t *s_inc) {

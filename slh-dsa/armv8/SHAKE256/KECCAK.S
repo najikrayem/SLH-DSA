@@ -519,22 +519,6 @@ KeccakF1600_StatePermute_ARMv8A:
     MOV round, #0
 
     // Load the string into state array i.e. X0 to X24
-    /*
-    LDP L_X0Y0, L_X0Y1, [str_ptr, #0]
-    LDP L_X0Y2, L_X0Y3, [str_ptr, #16]
-    LDP L_X0Y4, L_X1Y0, [str_ptr, #32]
-    LDP L_X1Y1, L_X1Y2, [str_ptr, #48]
-    LDP L_X1Y3, L_X1Y4, [str_ptr, #64]
-    LDP L_X2Y0, L_X2Y1, [str_ptr, #80]
-    LDP L_X2Y2, L_X2Y3, [str_ptr, #96]
-    LDP L_X2Y4, L_X3Y0, [str_ptr, #112]
-    LDP L_X3Y1, L_X3Y2, [str_ptr, #128]
-    LDP L_X3Y3, L_X3Y4, [str_ptr, #144]
-    LDP L_X4Y0, L_X4Y1, [str_ptr, #160]
-    LDP L_X4Y2, L_X4Y3, [str_ptr, #176]
-    LDR L_X4Y4, [str_ptr, #192]
-    */
-
     LDP L_X0Y0, L_X1Y0, [str_ptr, #0]
     LDP L_X2Y0, L_X3Y0, [str_ptr, #16]
     LDP L_X4Y0, L_X0Y1, [str_ptr, #32]
@@ -549,8 +533,6 @@ KeccakF1600_StatePermute_ARMv8A:
     LDP L_X2Y4, L_X3Y4, [str_ptr, #176]
     LDR L_X4Y4, [str_ptr, #192]
 
-
-
     // loop over all the rounds
 loop:
     keccak_round
@@ -559,22 +541,6 @@ loop:
     ble loop
 
     // Store the state back to memory
-    /*
-    STP L_X0Y0, L_X0Y1, [str_ptr, #0]
-    STP L_X0Y2, L_X0Y3, [str_ptr, #16]
-    STP L_X0Y4, L_X1Y0, [str_ptr, #32]
-    STP L_X1Y1, L_X1Y2, [str_ptr, #48]
-    STP L_X1Y3, L_X1Y4, [str_ptr, #64]
-    STP L_X2Y0, L_X2Y1, [str_ptr, #80]
-    STP L_X2Y2, L_X2Y3, [str_ptr, #96]
-    STP L_X2Y4, L_X3Y0, [str_ptr, #112]
-    STP L_X3Y1, L_X3Y2, [str_ptr, #128]
-    STP L_X3Y3, L_X3Y4, [str_ptr, #144]
-    STP L_X4Y0, L_X4Y1, [str_ptr, #160]
-    STP L_X4Y2, L_X4Y3, [str_ptr, #176]
-    STR L_X4Y4, [str_ptr, #192]
-    */
-
     STP L_X0Y0, L_X1Y0, [str_ptr, #0]
     STP L_X2Y0, L_X3Y0, [str_ptr, #16]
     STP L_X4Y0, L_X0Y1, [str_ptr, #32]
@@ -596,3 +562,176 @@ loop:
     RET
 
 //keccak_round
+
+
+
+
+
+// tmp2   0000 0000     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 0001     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 0010     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 0011     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 0100     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 0101     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 0110     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 0111     tmp2>>3     0 0000       tmp2>>3     0
+// tmp2   0000 1000     tmp2>>3     0 0001       tmp2>>3     1
+// tmp2   0000 1001     tmp2>>3     0 0001       tmp2>>3     1
+// tmp2   0000 1010     tmp2>>3     0 0001       tmp2>>3     1
+
+#define SHAKE256_RATE 136
+
+state_adr   .req X19
+msg_adr     .req X20
+msg_len     .req X21
+tmp         .req X22
+tmp2        .req X23
+tmp3        .req X24
+i           .req X25
+state_26    .req X25
+scratch1    .req X27
+scratch2    .req X28
+scratch3    .req X29
+
+
+.global Keccak_Inc_Absorb_ARMv8A
+.type Keccak_Inc_Absorb_ARMv8A, %function
+
+// X0: address of input state
+// X1: address of input message
+// X2: length of input message
+Keccak_Inc_Absorb_ARMv8A:
+    // Procedure call convention. TODO only needed if used registers 19-30
+    callee_saved
+
+    // move the inputs
+    MOV state_adr, X0
+    MOV msg_adr, X1
+    MOV msg_len, X2
+
+    // Load s_inc[25] into state_26
+    LDR state_26, [state_adr, #208]
+
+Keccak_Inc_Absorb_ARMv8A_WL1:
+    //while (mlen + s_inc[25] >= SHAKE256_RATE)
+    ADD scratch1, msg_len, state_26
+    CMP scratch1, #SHAKE256_RATE
+    B.LT Keccak_Inc_Absorb_ARMv8A_WL1_END        // TODO
+
+    // tmp = SHAKE256_RATE - s_inc[25];
+    MOV tmp, #SHAKE256_RATE
+    SUB tmp, tmp, state_26
+
+    // tmp2 = s_inc[25];
+    MOV tmp2, state_26
+
+    // for (i = 0; i < tmp; i++)
+    MOV i, #0
+Keccak_Inc_Absorb_ARMv8A_FL1:
+    CMP tmp, i
+    B.LT Keccak_Inc_Absorb_ARMv8A_FL1_END
+
+    //tmp3 = (uint64_t)msg[i]
+    LDR tmp3, [msg_adr, i, LSL #3]
+
+    // scratch2 = ((tmp2 & 0x07) << 3);
+    AND scratch2, tmp2, #0x07
+    LSL scratch2, scratch2, #3
+
+    // scratch3 = s_inc[tmp2 >> 3];
+    LDR scratch3, [state_adr, tmp2]
+
+    // tmp3 = tmp3 << scratch2;
+    LSL tmp3, tmp3, scratch2
+
+    // scratch3 = scratch3 ^ tmp3;
+    EOR scratch3, scratch3, tmp3
+
+    // s_inc[tmp2 >> 3] = scratch3;
+    STR scratch3, [state_adr, tmp2]
+
+    // tmp2++;
+    ADD tmp2, tmp2, #1
+
+    // i++;
+    ADD i, i, #1
+
+    B Keccak_Inc_Absorb_ARMv8A_FL1
+
+Keccak_Inc_Absorb_ARMv8A_FL1_END:
+
+    // msg_len -= tmp;
+    SUB msg_len, msg_len, tmp
+
+    // s_inc[25] = 0;
+    MOV state_26, #0
+
+    // msg += tmp;
+    ADD msg_adr, msg_adr, tmp
+
+
+    // permute the state
+    MOV x0, state_adr
+    MOV x1, state_adr
+    B KeccakF1600_StatePermute_ARMv8A
+    b Keccak_Inc_Absorb_ARMv8A_WL1
+
+Keccak_Inc_Absorb_ARMv8A_WL1_END:
+
+    // tmp2 = s_inc[25];
+    MOV tmp2, state_26
+
+    // for (i = 0; i < msg_len; i++)
+    MOV i, #0
+Keccak_Inc_Absorb_ARMv8A_FL2:
+    CMP msg_len, i
+    B.LT Keccak_Inc_Absorb_ARMv8A_FL2_END
+
+    //tmp3 = (uint64_t)msg[i]
+    LDR tmp3, [msg_adr, i, LSL #3]
+
+    // scratch2 = ((tmp2 & 0x07) << 3);
+    AND scratch2, tmp2, #0x07
+    LSL scratch2, scratch2, #3
+
+    // scratch3 = s_inc[tmp2 >> 3];
+    LDR scratch3, [state_adr, tmp2]
+
+    // tmp3 = tmp3 << scratch2;
+    LSL tmp3, tmp3, scratch2
+
+    // scratch3 = scratch3 ^ tmp3;
+    EOR scratch3, scratch3, tmp3
+
+    // s_inc[tmp2 >> 3] = scratch3;
+    STR scratch3, [state_adr, tmp2]
+
+    // tmp2++;
+    ADD tmp2, tmp2, #1
+
+    // i++;
+    ADD i, i, #1
+
+    B Keccak_Inc_Absorb_ARMv8A_FL2
+
+Keccak_Inc_Absorb_ARMv8A_FL2_END:
+    
+    // s_inc[25] += msg_len;
+    ADD state_26, state_26, msg_len
+
+    // s_inc[25] = state_26;
+    STR state_26, [state_adr, #208]
+
+    // Procedure call convention. TODO only needed if used registers 19-30
+    callee_restored
+
+    // Return
+    RET
+     
+
+
+
+
+
+
+

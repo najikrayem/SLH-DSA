@@ -26,5 +26,5 @@ else
 fi
 
 cd build
-make verbose=3
+make -j$(nproc) verbose=3
 

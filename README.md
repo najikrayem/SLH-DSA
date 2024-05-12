@@ -32,6 +32,19 @@ The rise of quantum computing is fast approaching, bringing with it significant 
 └── README.md
 ```
 
+## Performance
+
+Efforts are being made to optimize this SLH-DSA implementation. The following table shows the performance of the implementation on multiple platforms. The `perf` utility is used to measure the performance of the implementation. The `perf` utility is a performance analysis tool for Linux systems that supports a variety of performance counters. The performance counters are CPU hardware registers that count hardware events such as instructions executed. All tests were run from memory to avoid disk I/O overhead. The performance is measured in terms of the time taken to complete the operation and the file size of the executable. The performance is measured in milliseconds (ms) and the file size is measured in bytes (B). 
+
+
+| Algorithm Variant | Target Architechture | Microarchitecture | Processor | Clock Speed | Operation | File Size (B) | Time (ms) |
+|-------------------|----------------------|-------------------|-----------|-------------|-----------|---------------|-----------|
+| SLH-DSA           | ARMv8-A              | Cortex-A53        | BCM2837   | 1.0 GHz     | Gen Keys  | 1,000         | 0.0001    |
+
+
+
 ## References
 - FIPS 205: [Stateless Hash-Based Digital Signature Standard](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.205.ipd.pdf)
 - FIPS 202: [SHA-3 Standard: Permutation-Based Hash and Extendable-Output Functions](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf)
+
+

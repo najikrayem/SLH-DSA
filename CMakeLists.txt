@@ -27,7 +27,7 @@ endif()
 
 
 # Define the instrumentation option
-option(INSTRUMENTATION "Enable instrumentation" ON)
+option(INSTRUMENTATION "Enable instrumentation" OFF)
 # Link the instrumentation library to all targets if the option is ON
 if(INSTRUMENTATION)
     set(CMAKE_BUILD_TYPE Debug)
