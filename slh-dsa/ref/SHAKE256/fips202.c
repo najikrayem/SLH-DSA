@@ -350,13 +350,13 @@ static void KeccakF1600_StatePermute(uint64_t *state) {
  *              - size_t mlen: length of input in bytes
  **************************************************/
 static void keccak_inc_absorb(uint64_t *s_inc, const uint8_t *m,
-                              size_t mlen) {
+                              uint64_t mlen) {
     uint64_t i;
     uint8_t tmp;
     register uint64_t tmp2;
     register uint64_t tmp3;
 
-    printf("mlen = %lu\n", mlen);
+    //printf("mlen = %lu\n", mlen);
 
     while (mlen + s_inc[25] >= SHAKE256_RATE) {
 
@@ -595,7 +595,7 @@ void shake256_inc_init(uint64_t *s_inc) {
 }
 
 void shake256_inc_absorb(uint64_t *s_inc, const uint8_t *input, size_t inlen) {
-    keccak_inc_absorb(s_inc, input, inlen);
+    keccak_inc_absorb(s_inc, input, (uint64_t)inlen);
 }
 
 void shake256_inc_finalize(uint64_t *s_inc) {

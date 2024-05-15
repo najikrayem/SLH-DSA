@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <execinfo.h>
-#include <dlfcn.h>
+//#include <dlfcn.h>
 
 #ifdef __QNX__
     #include <sys/neutrino.h>
