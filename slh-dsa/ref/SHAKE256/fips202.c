@@ -46,7 +46,7 @@ static void store64(uint8_t *x, uint64_t u) {
 }
 
 
-#ifndef ARMV8A_CORTEXA72_OPTIMIZED
+#ifndef ARMV8A_OPTIMIZED            // TODO: Generic Armv8A implementation
 
 
 /* Keccak round constants */
@@ -666,3 +666,46 @@ void shake256(uint8_t *output, size_t outlen,
         }
     }
 }
+
+
+
+
+
+
+// .macro Keccak_Inc_Absorb_ARMv8A_for_loop_body_X4
+//     LDR scratch4, [msg_adr, i]
+    
+//     AND tmp3, scratch4, #0xFF
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF00
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF0000
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF000000
+//     keccak_absorb_inner
+
+//     ADD i, i, #4
+// .endm
+
+// .macro Keccak_Inc_Absorb_ARMv8A_for_loop_body_X8
+//     LDR scratch4, [msg_adr, i]
+    
+//     AND tmp3, scratch4, #0xFF
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF00
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF0000
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF000000
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF00000000
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF0000000000
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF000000000000
+//     keccak_absorb_inner
+//     AND tmp3, scratch4, #0xFF00000000000000
+//     keccak_absorb_inner
+
+//     ADD i, i, #8
+// .endm

@@ -3,6 +3,8 @@ add_subdirectory(SHAKE256)
 add_library(random OBJECT
     random.c
 )
+target_compile_options(random PRIVATE -flto -O3 -ffunction-sections -fdata-sections)
+target_link_options(random PRIVATE -flto -Wl,--gc-sections)
 
 
 # reference hash
@@ -25,6 +27,19 @@ target_link_libraries(slh_hash_A72
     $<TARGET_OBJECTS:armv8a_cortexa72_shake256>
 )
 target_compile_options(slh_hash_A72 PRIVATE)
+
+
+
+# Armv8 Cortex-a53 optimized hash
+add_library(slh_hash_A53 STATIC
+    slh_hash.c
+)
+target_link_libraries(slh_hash_A53
+    armv8a_cortexa53_shake256                           # TODO
+    $<TARGET_OBJECTS:armv8a_cortexa53_shake256>         # TODO
+)
+target_compile_options(slh_hash_A53 PRIVATE -flto -march=armv8-a -mtune=cortex-a53 -O3 -ffunction-sections -fdata-sections)
+target_link_options(slh_hash_A53 PRIVATE -flto -Wl,--gc-sections)
 
 
 
@@ -55,6 +70,22 @@ target_link_libraries(slh_common_A72 PUBLIC
     m
 )
 target_compile_options(slh_common_A72 PRIVATE)
+
+
+# Armv8 Cortex-a53 optimized common
+add_library(slh_common_A53 STATIC
+    slh_common.c
+)
+target_include_directories(slh_common_A53 PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(slh_common_A53 PUBLIC
+    slh_hash_A53
+    random
+    #m
+)
+target_compile_options(slh_common_A53 PRIVATE -flto -march=armv8-a -mtune=cortex-a53 -O3 -ffunction-sections -fdata-sections)
+target_link_options(slh_common_A53 PRIVATE -flto -Wl,--gc-sections)
 
 
 
@@ -131,3 +162,19 @@ target_link_libraries(slh_verify_A72 PUBLIC
     slh_common_A72
 )
 target_compile_options(slh_verify_A72 PRIVATE)
+
+
+
+
+# Armv8 Cortex-a53 optimized verify
+add_library(slh_verify_A53 STATIC
+    slh_verify.c
+)
+target_include_directories(slh_verify_A53 PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(slh_verify_A53 PUBLIC
+    slh_common_A53
+)
+target_compile_options(slh_verify_A53 PRIVATE -flto -march=armv8-a -mtune=cortex-a53 -O3 -ffunction-sections -fdata-sections)
+target_link_options(slh_verify_A53 PRIVATE -flto -Wl,--gc-sections)

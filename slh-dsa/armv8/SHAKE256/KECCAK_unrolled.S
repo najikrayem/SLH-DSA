@@ -1,5 +1,6 @@
     .data
     .balign 64
+
 round_constants:
     .quad 0x0000000000000001
     .quad 0x0000000000008082
@@ -57,16 +58,12 @@ L_X4Y2 .req X14
 L_X4Y3 .req X19
 L_X4Y4 .req X24
 
-
-
 /* X to C mappings */
 C_X0 .req X25
 C_X1 .req X26
 C_X2 .req X27
 C_X3 .req X28
 C_X4 .req X29
-
-
 
 /* X to D mapping used in theta */
 D_X0 .req X30
@@ -78,14 +75,6 @@ D_X4 .req x28
 .text
 .balign 64
 
-/* Theta
-    # instructions: 50
-    # avg throughput: 2
-    # estimated expected cycles: 25
-    # estimated time @ 1.8ghz: 25*0.556 = 13.9ns
-    # estimated total time: 13.9ns * 24 = 333.6ns
-*/
-//.macro theta
 theta:
 
     EOR C_X0, L_X0Y0, L_X0Y1
@@ -119,7 +108,6 @@ theta:
     EOR D_X4, C_X3, C_X0, ROR #63        // C_X0: 1, C_X3: *, C_X4: 1
     EOR D_X1, C_X0, C_X2, ROR #63        // C_X0: *, C_X2: 1, C_X4: 1
     EOR D_X3, C_X2, C_X4, ROR #63        // C_X2: *, C_X4: *
-
 
     /* XOR all lanes with respective 'D' */
     EOR L_X0Y0, L_X0Y0, D_X0
@@ -157,41 +145,6 @@ theta:
 //.endm
     //B rho_pi
 
-
-
-
-
-
-
-/*
-            Table of rho offsets:
-        x=3     x=4     x=0     x=1     x=2
-y=2     153     231     3       10      171
-y=1     55      276     36      300     6
-y=0     28      91      0       1       190
-y=4     120     78      210     66      253
-y=3     21      136     105     45      15
-
-            Table of rho offsets mod 64:
-        x=3     x=4     x=0     x=1     x=2
-y=2     25      39      3       10      43
-y=1     55      20      36      44      6
-y=0     28      27      0       1       62
-y=4     56      14      18      2       61
-y=3     21      8       41      45      15
-
-            Table of rho offsets mod 64 for ROR (64-a)%64:
-        x=3     x=4     x=0     x=1     x=2
-y=2     39      25      61      54      21
-y=1     9       44      28      20      58
-y=0     36      37      0       63      2
-y=4     8       50      46      62      3
-y=3     43      56      23      19      49
-
-
-*/
-/* Rho offsets */
-
 .equ L_X0Y0_ROR_OFFSET, 0
 .equ L_X0Y1_ROR_OFFSET, 28
 .equ L_X0Y2_ROR_OFFSET, 61
@@ -222,63 +175,7 @@ y=3     43      56      23      19      49
 .equ L_X4Y3_ROR_OFFSET, 56
 .equ L_X4Y4_ROR_OFFSET, 50
 
-
-
-/* pi 
-
-pi does not deserve a separate function as it is just a permutation of lanes.
-We just precompute the new indices and use aliases with underscores at the end
-to denote the new locations.
-
-A′[x, y]=A[(x + 3y) mod 5, x].
-
-A[0, 0] -> A'[0, 0]
-A[0, 1] -> A'[1, 3]
-A[0, 2] -> A'[2, 1]
-A[0, 3] -> A'[3, 4]
-A[0, 4] -> A'[4, 2]
-
-A[1, 0] -> A'[0, 2]
-A[1, 1] -> A'[1, 0]
-A[1, 2] -> A'[2, 3]
-A[1, 3] -> A'[3, 1]
-A[1, 4] -> A'[4, 4]
-
-A[2, 0] -> A'[0, 4]
-A[2, 1] -> A'[1, 2]
-A[2, 2] -> A'[2, 0]
-A[2, 3] -> A'[3, 3]
-A[2, 4] -> A'[4, 1]
-
-A[3, 0] -> A'[0, 1]
-A[3, 1] -> A'[1, 4]
-A[3, 2] -> A'[2, 2]
-A[3, 3] -> A'[3, 0]
-A[3, 4] -> A'[4, 3]
-
-A[4, 0] -> A'[0, 3]
-A[4, 1] -> A'[1, 1]
-A[4, 2] -> A'[2, 4]
-A[4, 3] -> A'[3, 2]
-A[4, 4] -> A'[4, 0]
-
-*/
-/* Rho_pi
-    # instructions: 26
-    # estimated avg throughput: 2
-    # expected cycles: 13
-    # estimated time @ 1.8ghz: 13*0.556 = 7.3ns
-    # estimated total time: 7.3ns * 24 = 175.2ns
-
-
-*/
-//.macro rho_pi
 rho_pi:
-    /* rotate all the lanes with respective offsets,
-        and place new values in the locations of the
-        PI step*/
-    //ROR L_X0Y0, L_X0Y0, #L_X0Y0_ROR_OFFSET
-
     ROR x25, L_X1Y0, #L_X1Y0_ROR_OFFSET
 
     ROR L_X1Y0, L_X1Y1, #L_X1Y1_ROR_OFFSET
@@ -309,16 +206,6 @@ rho_pi:
 //.endm
     //B chi
 
-
-
-/* chi
-    # instructions: 50
-    # avg throughput: 2
-    # estimated expected cycles: 25
-    # estimated time @ 1.8ghz: 25*0.556 = 13.9ns
-    # estimated total time: 13.9ns * 24 = 333.6ns
-*/
-//.macro chi
 chi:
 
     // Plane 0 -------------
@@ -433,14 +320,9 @@ chi:
 //.endm
     //B iota
     
-
-
 str_ptr  .req X29    //store the input pointer
 round   .req X30    //store the round number
 
-
-
-//.macro iota
 iota:
     adr x25, round_constants 
     LDR x26, [x25, round, lsl #3]

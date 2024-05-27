@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <math.h>
+//#include <math.h>
 
 
 #include "slh_common.h"
@@ -191,7 +191,7 @@ void base_2b(const char *x, uint64_t in_len, uint8_t b, uint8_t out_len, uint16_
 void wots_PKFromSig(const char *sig, const char *m, const char *pk_seed, ADRS *adrs, char *pk_out) {
     uint64_t csum = 0;
     
-    char msg_csum[SLH_PARAM_len];
+    //char msg_csum[SLH_PARAM_len];
 
     uint16_t msg[SLH_PARAM_len1 + SLH_PARAM_len2];
     base_2b(m, SLH_PARAM_n, SLH_PARAM_lgw, SLH_PARAM_len1, msg);

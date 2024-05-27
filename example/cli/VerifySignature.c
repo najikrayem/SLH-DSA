@@ -49,6 +49,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    // Advise the kernel of our access pattern
+    madvise(msg, msgSize, MADV_SEQUENTIAL);
+
 
     // Attemp to mmap the input signature file
     FILE *sigFile = fopen(signatureFile, "r");
